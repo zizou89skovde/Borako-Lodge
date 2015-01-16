@@ -41,3 +41,22 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+*.class
+*.html
+doc
+gen
+Lodge2.0/project.properties
+*.jar
+*.cache
+*.dex
+bin
+Lodge2.0/.project
+Lodge2.0/.classpath
+Lodge2.0/proguard-project.txt
+Lodge2.0/res/values/styles.xml
+Lodge2.0/res/values/strings.xml
+Lodge2.0/res/values/dimens.xml
+Lodge2.0/res/values-w820dp/dimens.xml
+Lodge2.0/res/values-v14/styles.xml
+Lodge2.0/res/values-v11/styles.xml
