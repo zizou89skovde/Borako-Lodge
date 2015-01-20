@@ -1,7 +1,6 @@
 package com.lodge.gl.utils;
 
 import com.lodge.gl.camera.Camera;
-
 import android.opengl.Matrix;
 
 public class Light {
@@ -11,9 +10,10 @@ public class Light {
 	public final static String LABEL_LIGHT_POS= "u_LightPosition";
 	
 
-	public enum LightPropeties{
+	public enum Type{
 		POSITIONAL,
 		DIRECTIONAL,
+		NONE
 	}
 	
 	final float UNASSIGNED = -999;
@@ -26,22 +26,22 @@ public class Light {
 	float[] mLightMatrix;
 	float[] mTextureMatrix;
 
-	LightPropeties mType;
+	Type mType;
 
 	boolean mUseLightMatrix;
 	boolean mUseTextureMatrix;
 	boolean mIsDynamic;
 	
-	public Light(LightPropeties type){
+	public Light(Type type){
 		setup(type,false,false);
 	}
 
-	public Light(LightPropeties type, boolean useTextureMatrix, boolean useLightMatrix) {
+	public Light(Type type, boolean useTextureMatrix, boolean useLightMatrix) {
 		setup(type,useTextureMatrix,useLightMatrix);
 
 	}
 
-	private void setup(LightPropeties type, boolean useTextureMatrix, boolean useLightMatrix){
+	private void setup(Type type, boolean useTextureMatrix, boolean useLightMatrix){
 		mType = type;
 
 		mDirection = new float[]{UNASSIGNED,UNASSIGNED,UNASSIGNED};
@@ -130,6 +130,10 @@ public class Light {
 		}
 		
 		
+	}
+
+	public Type type() {
+			return mType;
 	}
 
 

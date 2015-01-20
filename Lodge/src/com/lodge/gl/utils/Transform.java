@@ -2,10 +2,9 @@ package com.lodge.gl.utils;
 
 import com.lodge.err.GLError;
 import com.lodge.math.UtilMatrix;
-
 import android.opengl.GLES30;
 import android.opengl.Matrix;
-import android.util.Log;
+
 
 public class Transform {
 
@@ -26,7 +25,7 @@ public class Transform {
 	private float[] mTranslate;
 	private float[] mRotate;
 	private float[] mScale;
-	private float[] mArbRotate; // TODO: ArbRotate
+	//private float[] mArbRotate; // TODO: ArbRotate
 
 	private Type mType;
 
@@ -199,6 +198,10 @@ public class Transform {
 
 
 		}
+	}
+
+	public Type type() {
+		return mType;
 	}
 
 }

@@ -3,8 +3,6 @@ package com.lodge.err;
 import android.opengl.GLES30;
 import android.util.Log;
 
-import com.lodge.R;
-
 public class GLError {
 
 	static final String TAG = "GL_Error";

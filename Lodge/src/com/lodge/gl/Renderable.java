@@ -7,11 +7,11 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.util.Log;
 
-import com.lodge.err.GLError;
 import com.lodge.gl.model.ModelData;
 import com.lodge.gl.model.ModelLoader;
 import com.lodge.gl.utils.Draw.Method;
 import com.lodge.gl.utils.Draw;
+import com.lodge.gl.utils.Light;
 import com.lodge.gl.utils.Settings;
 import com.lodge.gl.utils.Shader;
 import com.lodge.gl.utils.Texture;
@@ -50,6 +50,7 @@ public class Renderable {
 	private Vector<VBO>			mVBOs;
 	private Vector<Uniform>  	mUniforms;
 	private Vector<Texture> 	mTextures;
+	private Vector<Light> 	mLight;
 	
 	boolean mRenderDepth;
 	
@@ -59,9 +60,10 @@ public class Renderable {
 		mResources = res;
 		
 		// Create lists
-		mVBOs = new Vector<VBO>();
+		mVBOs 	  = new Vector<VBO>();
 		mUniforms = new Vector<Uniform>();
 		mTextures = new Vector<Texture>();
+		mLight 	  = new Vector<Light>();
 
 		//Set some default settings
 		mSettings = new Settings();
@@ -214,6 +216,10 @@ public class Renderable {
 		mTextures.add(new Texture(bitmap,mSettings.mMipMapEnabled, label));
 	}
 	
+	protected void addLight(Light l){
+		mLight.add(l);
+	}
+	
 	protected void setTransformType(Transform.Type type){
 		mTransform = new Transform(type);
 	}
@@ -265,6 +271,9 @@ public class Renderable {
 		
 		mTransform.upload(program, projection, view);
 		
+		for(Light l : mLight)
+				l.upload(program, 0);
+		
 		Draw.draw(mSettings, mVAO);
 		
 		mVAO.unbind();
@@ -285,6 +294,26 @@ public class Renderable {
 	
 	protected void setDepthRendering(boolean bool){
 		mRenderDepth = bool;
+	}
+
+	public Transform getTransform() {
+		return mTransform;
+	}
+
+	public VAO getVAO() {
+		return mVAO;
+	}
+
+	public Texture getTexture() {
+		if(mTextures.size() > 0)
+			return mTextures.get(0);
+		return null;
+	}
+
+	public Light getLight() {
+		if(mLight.size() > 0 )
+			return mLight.get(0);
+		return null;
 	}
 	
 	

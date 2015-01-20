@@ -6,9 +6,7 @@ import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
 import com.lodge.err.GLError;
-
 import android.opengl.GLES30;
-import android.util.Log;
 
 public class VBO {
 

@@ -205,4 +205,7 @@ public class Texture {
 	public int get() {
 		return mTexture[0];
 	}
+	public String getLabel() {
+		return mLabel;
+	}
 }

@@ -1,11 +1,8 @@
 package com.lodge.gl.utils;
 
 import java.nio.Buffer;
-
 import com.lodge.err.GLError;
-
 import android.opengl.GLES30;
-import android.util.Log;
 
 public class FBO {
 
@@ -44,8 +41,6 @@ public class FBO {
 
 	Content mContent;
 
-	private boolean hasRenderTarget;
-
 
 	public FBO(int width, int height){
 		setup(width, height,GLES30.GL_UNSIGNED_BYTE,GLES30.GL_RGBA,null,Content.COLOR);
@@ -74,7 +69,7 @@ public class FBO {
 		mInternalFormat = internalFormat;
 		mFormat = GLES30.GL_RGBA;
 		mType	= type;
-		hasRenderTarget = false;
+	
 
 		switch(content){
 

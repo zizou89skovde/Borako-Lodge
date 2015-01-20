@@ -8,11 +8,11 @@ import com.lodge.misc.StringUtils;
 
 public class Attributes {
 
-	
+
 	public static String LABEL_ATTR_FS_POS    = "f_Position";
 	public static String LABEL_ATTR_FS_NORMAL = "f_Normal";
 	public static String LABEL_ATTR_FS_TCOORD = "f_Texcoord";
-	
+
 	static String[] ATTR_TYPE(Integer[] sizeStr){
 
 		int len = sizeStr.length;
@@ -48,58 +48,58 @@ public class Attributes {
 		return types;
 
 	}
-	
+
 	static String DECLARE(Shading.Type sShading,Texturing.Type sTexturing,String inout){
 		//Resulting String
 		ArrayList<String> temp = new ArrayList<String>();
-		
+
 		//Attributes - Position & Normal
-		String[] vsAttr = Shading.ATTR_FS_DECLARE(sShading);
-		String[] vsAttrType = StringUtils.STR_SET(vsAttr.length, inout +" vec3 ");
-		String[] attrRows = StringUtils.CONCAT(vsAttr, vsAttrType);
-		
-		StringUtils.APPEND(temp, attrRows);
-		
+		String[] vsAttr 	= Shading.ATTR_FS_DECLARE(sShading);
+		if(vsAttr != null){
+			String[] vsAttrType = StringUtils.STR_SET(vsAttr.length, inout +" vec3 ");
+			String[] attrRows 	= StringUtils.CONCAT(vsAttrType,vsAttr);
+			StringUtils.APPEND(temp, attrRows);
+		}
 		//Attributes - Texture Coordinates		
-		String[] vsTCoord = Texturing.FS_ATTR_DECLARE(sTexturing);
+		String[] vsTCoord = Texturing.FS_ATTR_DECLARE(sTexturing,inout);
 		if(vsTCoord != null){
-			String[] vsTCoordType = StringUtils.STR_SET(vsAttr.length, inout +" vec2 ");
-			String[] tCoordRows = StringUtils.CONCAT(vsTCoord, vsTCoordType);
+			String[] vsTCoordType = StringUtils.STR_SET(vsTCoord.length, inout +" vec2 ");
+			String[] tCoordRows = StringUtils.CONCAT(vsTCoordType,vsTCoord);
 			StringUtils.APPEND(temp, tCoordRows);
 		}
-	
+
 		String[] res = temp.toArray(new String[temp.size()]);
-		
+
 		return ShaderComposer.FORMAT_LINE(res);
 	}
-	
-	static String FS_IN_DECLARE(Shading.Type sShading,Texturing.Type sTexturing){
+
+	public static String FS_IN_DECLARE(Shading.Type sShading,Texturing.Type sTexturing){
 		return DECLARE(sShading, sTexturing, "in");
 	}
-	
-	static String VS_OUT_DECLARE(Shading.Type sShading,Texturing.Type sTexturing){
+
+	public static String VS_OUT_DECLARE(Shading.Type sShading,Texturing.Type sTexturing){
 		return DECLARE(sShading, sTexturing, "out");	
 	}
 
-	static String VS_IN_DECLARE(VAO vao){
+	public static String VS_IN_DECLARE(VAO vao){
 		String[]  vsIn = vao.getAttributesString();
 		Integer[] attrSize = vao.getAttributesSize();
 
-				
-		
+
+
 		if(vsIn.length != attrSize.length)
 			GLError.exit("VS_INPUT: inconstistent lengths");
 
 		//Determine attribute type
 		String vsType[] = ATTR_TYPE(attrSize);
-		
+
 		//Concatenate type with variable names
 		String[] vsRows = StringUtils.CONCAT(vsType, vsIn);
-		
+
 		//Format attribute rows to a compilable string  
 		return ShaderComposer.FORMAT_LINE(vsRows);
-		
+
 	}
-	
-	
+
+
 }

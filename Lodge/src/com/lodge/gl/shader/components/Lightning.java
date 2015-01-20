@@ -16,14 +16,10 @@ public class Lightning {
 	static final String FS_DIRECTION_TYPE = " vec3 ";
 	static final String FS_POSITION_TYPE  = " vec3 ";
 
-	public enum Type{
-		POSITIONAL,
-		DIRECTIONAL,
-		NONE
-	}
 
 
-	public static String VS_IN_DECLARE(Type t,String[] strLight){
+
+	public static String VS_IN_DECLARE(Light.Type t,String[] strLight){
 		String[] s = null;
 		switch(t){
 
@@ -48,10 +44,10 @@ public class Lightning {
 		if(s != null)
 			return ShaderComposer.FORMAT_LINE(s);
 
-		return null;
+		return "";
 	}
 
-	public static String FS_DECLARE(Type t,String[] strLight, String inout){
+	public static String FS_DECLARE(Light.Type t,String[] strLight, String inout){
 		String[] s = null;
 		switch(t){
 
@@ -76,7 +72,7 @@ public class Lightning {
 		if(s != null)
 			return ShaderComposer.FORMAT_LINE(s);
 		
-		return null;
+		return "";
 	}
 
 	static String COMPUTE_POS(String transform){
@@ -84,24 +80,24 @@ public class Lightning {
 	}
 
 	static String COMPUTE_DIR(String transform){
-		return "= " + transform  + Light.LABEL_LIGHT_DIR;
+		return "= " + transform  +"*" + Light.LABEL_LIGHT_DIR;
 	}
 
 
-	public static String[] VS_MAIN(Type t,String[] transforms) {
+	public static String VS_MAIN(Light.Type t,String[] transforms) {
 
 		String[] s = null;
 		switch(t){
 
 		case POSITIONAL:
 			s = new String[2];
-			s[0] = ShaderComposer.TAB + FS_DECLARE_POSITION + ShaderComposer.TAB + COMPUTE_POS(transforms[1]);
-			s[1] = ShaderComposer.TAB + FS_DECLARE_DIRECTION + ShaderComposer.TAB + COMPUTE_DIR(transforms[2]);
+			s[0] = ShaderComposer.TAB + FS_DECLARE_POSITION + COMPUTE_POS(transforms[1]);
+			s[1] = ShaderComposer.TAB + FS_DECLARE_DIRECTION + COMPUTE_DIR(transforms[2]);
 			break;
 
 		case DIRECTIONAL:
 			s = new String[1];
-			s[1] = ShaderComposer.TAB + FS_DECLARE_DIRECTION + ShaderComposer.TAB + COMPUTE_DIR(transforms[2]);;
+			s[0] = ShaderComposer.TAB + FS_DECLARE_DIRECTION +  COMPUTE_DIR(transforms[2]);
 
 			break;
 
@@ -113,7 +109,9 @@ public class Lightning {
 
 		}
 
+		if(s != null)
+			return ShaderComposer.FORMAT_LINE(s);
 
-		return s;
+		return "";
 	}
 }

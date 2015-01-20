@@ -27,6 +27,9 @@ public class StringUtils {
 		}
 		
 	}
+	static public void APPEND(ArrayList<String> list, String s){
+			list.add(s);
+	}
 	
 	
 	static public String [] APPEND(String[] s1, String[] s2){

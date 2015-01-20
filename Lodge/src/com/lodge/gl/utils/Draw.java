@@ -1,7 +1,4 @@
 package com.lodge.gl.utils;
-
-import com.lodge.err.GLError;
-
 import android.opengl.GLES30;
 
 public class Draw {
