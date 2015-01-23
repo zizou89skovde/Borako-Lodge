@@ -1,5 +1,7 @@
 package com.lodge.math;
 
+import com.lodge.err.GLError;
+
 import android.opengl.Matrix;
 public class UtilVector {
 
@@ -300,7 +302,30 @@ public class UtilVector {
 		return R;
 	}
 
+	public static int append(float[] dst, float src[], int off){
+		for (int i = 0; i < src.length; i++) {
+			dst[off+i] = src[i];
+		}
+		return off+src.length;
+	}
 
+	public static float[] expand(float[] v, int exp, float val) {
+		if(v.length > exp)
+			GLError.exit("Vector: expand error size " );
+		
+		float[] res = new float[exp];
+		
+		for (int i = 0; i < v.length; i++) {
+			res[i] = v[i];
+		}
+		for (int i = 0; i < exp; i++) {
+			res[v.length + i] = val;
+		}
+		
+		return res;
+		
+		
+	}
 
 
 

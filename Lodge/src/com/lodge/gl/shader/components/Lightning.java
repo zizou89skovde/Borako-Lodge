@@ -47,7 +47,7 @@ public class Lightning {
 		return "";
 	}
 
-	public static String FS_DECLARE(Light.Type t,String[] strLight, String inout){
+	public static String FS_DECLARE(Light.Type t,String inout){
 		String[] s = null;
 		switch(t){
 

@@ -4,12 +4,12 @@ import android.util.Log;
 
 public class UtilMatrix {
 
-	
-static public float[] InverseTranspose(float[] in)
+
+	static public float[] InverseTranspose(float[] in)
 	{
 		float a11, a12, a13, a21, a22, a23, a31, a32, a33;
 		float[] out = new float[16];
-		
+
 		// Copying to internal variables
 		a11 = in[0];
 		a12 = in[1];
@@ -39,5 +39,25 @@ static public float[] InverseTranspose(float[] in)
 		}
 
 		return out;
+	}
+
+	public static float[] M3V3(float[] m, float[] v) {
+		float[] res = new float[3];
+		int o = 0;
+		for(int i = 0; i < 3; i ++){
+			res[i] = m[o]*v[1] + m[o+1]*v[1] + m[o+2]*v[2];
+			o+=3;
+		}
+		return res;
+	}
+
+	public static float[] M4V4(float[] m, float[] v) {
+		float[] res = new float[3];
+		int o = 0;
+		for(int i = 0; i < 4; i ++){
+			res[i] = m[o]*v[1] + m[o+1]*v[1] + m[o+2]*v[2] + + m[o+3]*v[3];
+			o+=4;
+		}
+		return res;
 	}
 }

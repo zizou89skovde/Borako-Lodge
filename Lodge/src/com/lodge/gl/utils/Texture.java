@@ -1,6 +1,6 @@
 package com.lodge.gl.utils;
 
-import com.lodge.err.GLError;
+import java.util.Vector;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -9,6 +9,8 @@ import android.opengl.GLES20;
 import android.opengl.GLES30;
 import android.opengl.GLUtils;
 
+import com.lodge.err.GLError;
+
 public class Texture {
 
 
@@ -16,6 +18,7 @@ public class Texture {
 	private String mLabel;
 	private boolean isShared;
 	private boolean isMipmaped;
+
 /**
  * 
  * 
@@ -208,4 +211,15 @@ public class Texture {
 	public String getLabel() {
 		return mLabel;
 	}
+	
+	public static void Bind(Vector<Texture> t,int program){
+		int count = 0;
+		for (Texture texture : t) {
+			texture.select(program, count);
+			count++;
+		}
+		
+	}
+	
+
 }

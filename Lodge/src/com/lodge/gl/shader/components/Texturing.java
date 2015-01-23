@@ -15,6 +15,7 @@ public class Texturing {
 		NONE
 	}
 
+	final static String TEXTURE_TYPE = "uniform sampler2D";
 
 
 	public static boolean HAS_TCOORDS(String[] attr){
@@ -37,7 +38,7 @@ public class Texturing {
 		case TEXTURED_VPOS:
 		case TEXTURED_VPOS_REPEATED:
 			s = new String[1];
-			s[0] = inout + " " + Attributes.LABEL_ATTR_FS_TCOORD;
+			s[0] =  Attributes.LABEL_ATTR_FS_TCOORD;
 		case NONE:
 			break;
 
@@ -46,6 +47,7 @@ public class Texturing {
 			break;
 
 		}
+		
 		return s;
 
 	}
@@ -60,12 +62,14 @@ public class Texturing {
 			break;
 		case TEXTURED_VPOS:
 			shading = new String[1];
-			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_TCOORD + " = " + "(" + VBO.LABEL_POSITION + "+1.0)*0.5";
+			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_TCOORD + " = " + "(" + VBO.LABEL_POSITION + ".xy+1.0)*0.5";
 			break;
 		case TEXTURED_VPOS_REPEATED:
 			shading = new String[1];
 			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_TCOORD + " = " + VBO.LABEL_POSITION + " * vec2("  + String.valueOf(repeat[0])+ "," + String.valueOf(repeat[1]) + ")";
-
+			break;
+		case NONE:
+			shading = new String[]{""};
 			break;
 		default:
 			GLError.exit("Texturing : Invalid Type");
@@ -74,13 +78,22 @@ public class Texturing {
 		return ShaderComposer.FORMAT_LINE(shading);
 	}
 
-	public static String FS_MAIN(Type t,Texture texture){
+	public static String FS_MAIN(Type t,String str){
 		
-		String label = texture.getLabel();
 		
 		String[] s = new String[1];
-		s[0] = "vec4 color = texture(" + label + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");";
+		if(t == Type.NONE )
+			s[0] = ShaderComposer.TAB +  "vec4 color = vec4(" + str + ")";
+		else
+			s[0] = ShaderComposer.TAB +  "vec4 color = texture(" + str + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");";
+		
 
+		return ShaderComposer.FORMAT_LINE(s);
+	}
+
+	public static String FS_TEXTURE_DECLARE(Texture texture) {
+		String[] s = new String[1];
+		s[0] = TEXTURE_TYPE + " " + texture.getLabel();
 		return ShaderComposer.FORMAT_LINE(s);
 	}
 }

@@ -1,12 +1,15 @@
 package com.lodge.gl.shader.components;
 
+import java.util.ArrayList;
+
 import com.lodge.err.GLError;
 import com.lodge.gl.shader.ShaderComposer;
 import com.lodge.gl.utils.VBO;
+import com.lodge.misc.StringUtils;
 
 public class Shading {
-	
-	final static String FS_DECLARE_COLOR = "ut vec4 out_value";
+
+	final static String FS_DECLARE_COLOR = "out vec4 out_value";
 	public final static String FS_COLOR = "out_value";
 	public final static String VS_GL_POSITION = "gl_Position";
 	public enum Type{
@@ -16,7 +19,7 @@ public class Shading {
 		NONE
 
 	}
-	
+
 	static String[] ATTR_FS_DECLARE(Type t){
 		String[] attr = null;
 		switch(t){
@@ -29,8 +32,8 @@ public class Shading {
 			break;
 		case NONE:
 			break;
-			default:
-				GLError.exit("Shading: Invalid shading type");
+		default:
+			GLError.exit("Shading: Invalid shading type");
 		}
 		return attr;
 	}
@@ -71,82 +74,96 @@ public class Shading {
 
 
 	public static String VS_MAIN(Type t ,String[] sTransforms){
-		
+
 		String[] shading  = null;
 		switch(t){
-			
+
 		case PHONG:
 			shading = new String[3]; 
-			shading[0] = ShaderComposer.TAB + "f_Position" + " = " + sTransforms[1] + "*vec4(" + VBO.LABEL_POSITION+",1.0)";
-			shading[1] = ShaderComposer.TAB + "f_Normal" + " = " + sTransforms[1] + "*vec4(" + VBO.LABEL_POSITION+",1.0)";
+			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_POS + " = vec3(" + sTransforms[1] + "*vec4(" + VBO.LABEL_POSITION+",1.0))";
+			shading[1] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_NORMAL + " = " + sTransforms[2] + "*" + VBO.LABEL_NORMAL;
 			shading[2] = ShaderComposer.TAB + VS_GL_POSITION + " = " + sTransforms[0] + " *vec4(" + VBO.LABEL_POSITION+",1.0)";
 			break;
 		case DIFFUSE:
 			shading = new String[2];
-			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_NORMAL + "= " + sTransforms[1] + "*vec4(" + VBO.LABEL_POSITION+",1.0)";
+			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_NORMAL + " = " + sTransforms[2] + "*" + VBO.LABEL_NORMAL;
 			shading[1] = ShaderComposer.TAB + VS_GL_POSITION + " = " + sTransforms[0] + " *vec4(" + VBO.LABEL_POSITION+",1.0)";
 			break;
-			
+
 		case NONE:
 			shading = new String[1];
 			shading[0] = ShaderComposer.TAB + VS_GL_POSITION + " = " + "vec4(" + VBO.LABEL_POSITION+",1.0)";
 			break;
-			
+
 		default:
 			GLError.exit("Shading: Invalid type");
 		}
 
 		return ShaderComposer.FORMAT_LINE(shading);
 	}
-	
-	public static String FS_DECLARE(){
+
+	public static String FS_DECLARE_COLOR(){
 		return ShaderComposer.FORMAT_LINE( new String[]{FS_DECLARE_COLOR});
 	}
-	
-	public static String FS_MAIN(Type t ,String[] sTransforms){
+
+	public static String FS_MAIN(Type t){
 
 		String[] shading  = null;
+		ArrayList<String> temp = new ArrayList<String>();
 		int i = 0;
 		switch(t){
 
 		case PHONG:
-			shading = new String[10];
 			
-			shading[i++] = "vec3 l = normalize("  + Lightning.FS_DECLARE_DIRECTION + ")";
-			shading[i++] = "vec3 e = normalize(-" + Attributes.LABEL_ATTR_FS_POS + ")";
-			shading[i++] = "vec3 n = normalize("  + Attributes.LABEL_ATTR_FS_NORMAL + ")";
-			shading[i++] = "vec3 r = normalize(-l,n)";
-			shading[i++] = "";
-			shading[i++] = "float specular = max(dot(r,e),0.0)";
-			shading[i++] = "specular = pow(specular,20.0)";
-			shading[i++] = "";
-			shading[i++] = "float diffuse = max(dot(n,l),0.0)";
-			shading[i++] = "float ambient = 0.1";
-			shading[i++] = "out_Color = (specular+diffuse+ambient)*color";
+			
+			
+
+			temp.add("vec3 l = normalize("  + Lightning.FS_DECLARE_DIRECTION + ")");
+			temp.add("vec3 e = normalize(-" + Attributes.LABEL_ATTR_FS_POS + ")");
+			temp.add("vec3 n = normalize("  + Attributes.LABEL_ATTR_FS_NORMAL + ")");
+			temp.add("vec3 r = reflect(-l,n)");
+			
+			temp.add("float specular = max(dot(r,e),0.0)");
+			temp.add("specular = pow(specular,20.0)");
+			
+			temp.add("float diffuse = max(dot(n,l),0.0)");
+			temp.add("float ambient = 0.1");
+			temp.add(FS_COLOR+" = (specular+diffuse+ambient)*color");
+			
+
+			shading = StringUtils.TO_ARR(temp);
+			
 			break;
 		case DIFFUSE:
 			shading = new String[2]; 
-			shading[i++] = "vec3 l = normalize("  + Lightning.FS_DECLARE_DIRECTION + ")";
-			shading[i++] = "vec3 n = normalize("  + Attributes.LABEL_ATTR_FS_NORMAL + ")";
-			shading[i++] = "float diffuse = max(dot(n,l),0.0)";
-			shading[i++] = "float ambient = 0.1";
-			shading[i++] = "out_Color = (diffuse+ambient)*color";
-			break;
-		case NONE:
-			shading = new String[1];
-			shading[i++] = "out_Color = color";
-			break;
+			temp.add( "vec3 l = normalize("  + Lightning.FS_DECLARE_DIRECTION + ")");
+			temp.add("vec3 n = normalize("  + Attributes.LABEL_ATTR_FS_NORMAL + ")");
+			temp.add(shading[i++] = "float diffuse = max(dot(n,l),0.0)");
+			temp.add(shading[i++] = "float ambient = 0.1");
+			temp.add(shading[i++] = "out_Color = (diffuse+ambient)*color");
 			
+			shading = StringUtils.TO_ARR(temp);
+			break;
+		case NONE:		
+			temp.add("out_Color = color");
+			shading = StringUtils.TO_ARR(temp);
+			break;
+
 		default:
 			GLError.exit("Shading: Invalid type");
 			break;
 
 		}
-		
-		return ShaderComposer.FORMAT_LINE(shading);
+		if(shading != null){
+			String[] TAB = StringUtils.STR_SET(shading.length, ShaderComposer.TAB);
+			return ShaderComposer.FORMAT_LINE(StringUtils.CONCAT(TAB, shading));
+		}
 
 
-		
+		return "";
+
+
+
 	}
 
 

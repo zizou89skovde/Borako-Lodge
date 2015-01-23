@@ -77,4 +77,8 @@ public class StringUtils {
 		return out;
 	}
 
+	public static String[] TO_ARR(ArrayList<String> strList) {
+		return strList.toArray(new String[strList.size()]);
+	}
+
 }

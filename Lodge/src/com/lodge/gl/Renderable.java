@@ -5,12 +5,18 @@ import java.util.Vector;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.opengl.GLES30;
 import android.util.Log;
 
+import com.lodge.err.GLError;
 import com.lodge.gl.model.ModelData;
 import com.lodge.gl.model.ModelLoader;
-import com.lodge.gl.utils.Draw.Method;
+import com.lodge.gl.shader.ShaderComposer;
+import com.lodge.gl.shader.components.Shading;
+import com.lodge.gl.shader.components.Shading.Type;
+import com.lodge.gl.shader.components.Texturing;
 import com.lodge.gl.utils.Draw;
+import com.lodge.gl.utils.Draw.Method;
 import com.lodge.gl.utils.Light;
 import com.lodge.gl.utils.Settings;
 import com.lodge.gl.utils.Shader;
@@ -19,6 +25,7 @@ import com.lodge.gl.utils.Transform;
 import com.lodge.gl.utils.Uniform;
 import com.lodge.gl.utils.VAO;
 import com.lodge.gl.utils.VBO;
+import com.lodge.scene.LodgeScene;
 /**
  * When subclassing Renderable:
  * </br> 
@@ -41,7 +48,7 @@ import com.lodge.gl.utils.VBO;
 public class Renderable {
 	
 	Resources mResources;
-	
+	private LodgeScene			mScene;
 	private VAO 				mVAO;
 	private Shader 				mShader;
 	protected Transform 		mTransform;
@@ -50,27 +57,60 @@ public class Renderable {
 	private Vector<VBO>			mVBOs;
 	private Vector<Uniform>  	mUniforms;
 	private Vector<Texture> 	mTextures;
-	private Vector<Light> 	mLight;
+	private Vector<Light> 		mLight;
+	private float[]				mColor;
+	
+	private float[]				mOrigin = new float[3];
+	
+	
+	private boolean mInitialized;
+	
+	/*
+	 * Shader Related items
+	 */
+	Shading.Type mShading = Shading.Type.PHONG;
+	Shading.Type mTexturing;
+	
 	
 	boolean mRenderDepth;
 	
 	
-	public Renderable(Resources res){
+	public Renderable(Resources res,LodgeScene scene){
 		// Store reference to resources 
 		mResources = res;
+		
+		mScene = scene;
 		
 		// Create lists
 		mVBOs 	  = new Vector<VBO>();
 		mUniforms = new Vector<Uniform>();
 		mTextures = new Vector<Texture>();
+		
+		//Setup up light sources
 		mLight 	  = new Vector<Light>();
+		setLights();
 
 		//Set some default settings
 		mSettings = new Settings();
 		mSettings.mDrawMethod = Draw.Method.ELEMENTS;
+		
 		// To be used for light depth rendering
 		mRenderDepth = false;
+		mInitialized = false;
 		
+		// Default transform is MVP
+		setTransformType(Transform.Type.MVP);
+
+		//Default positions in 0 
+		mTransform.translate(0, 0, 0);
+		
+	}
+	
+	/**
+	 * Run initially and thereafter every fram. Checks which light that are affecting this renderable.
+	 */
+	private void setLights(){
+		mScene.setLights(mLight,mOrigin);
 	}
 	
 	/**
@@ -92,8 +132,8 @@ public class Renderable {
 	 * Load model from resources. Create VAO & VBOs.
 	 * @param resId
 	 */
-	protected void loadModel(int resId){
-		loadModel(resId,true,true);
+	protected void setModel(int resId){
+		setModel(resId,true,true);
 	}
 	/**
 	 * 
@@ -101,7 +141,7 @@ public class Renderable {
 	 * @param useNormal Possible to discard normal buffer
 	 * @param useTextureCoords Possible to discard texcoord buffer
 	 */
-	protected void loadModel(int resId, boolean useNormal, boolean useTextureCoords){
+	protected void setModel(int resId, boolean useNormal, boolean useTextureCoords){
 		if(mVAO != null){
 			Log.e("GL_ERROR", "VAO already exist. Previous VAO and its content will be deallocated");
 			
@@ -135,6 +175,8 @@ public class Renderable {
 		mVAO.addVBO(mVBOs);
 		mVAO.unbind();
 	}
+	
+	
 	
 	void addVBO(float[] data,int stride,String label){
 		
@@ -205,6 +247,22 @@ public class Renderable {
 	protected void addTexture(int id,String label){
 		mTextures.add(new Texture(mResources,id,mSettings.mMipMapEnabled, label));
 	}
+	
+	public void setColor(float r, float g, float b, float a){
+		mColor = new float[] {r,g,b,a};
+	}
+	
+	public String colorString() {
+		if(mColor == null)
+			GLError.exit("Renderable does not contain texture or color ");
+		String color = new String();
+		for (int i = 0; i < 3; i++) {
+			color+= String.valueOf(mColor[i]);
+			color+= ",";
+		}
+		color+= String.valueOf(mColor[3]);
+		return color;
+	}
 	/**
 	 * Add an existing texture.
 	 */
@@ -246,35 +304,41 @@ public class Renderable {
 				mUniforms.add(uniform);
 			}
 	}
+
 	
-	private void bindTextures(){
-		int count = 0;
-		int program = mShader.get();
-		for (Texture texture : mTextures) {
-			texture.select(program, count);
-			count++;
+	/**
+	 * Runs only first frame.
+	 */
+	private void init(){
+		if(mInitialized)
+			return;
+		// Auto generate shader 
+		if(mShader == null){
+			mShader = ShaderComposer.create(this);
 		}
+		mInitialized = true;
+		
 	}
 	
 
+
 	public void render(float[] projection,float[] view){
 		
-		
-		
+		init();
+				
 		int program  = mShader.get();
 		
 		mShader.use();
 		
 		mVAO.bind();
 		
-		bindTextures();
+		Texture.Bind(mTextures,program);
 		
 		mTransform.upload(program, projection, view);
 		
-		for(Light l : mLight)
-				l.upload(program, 0);
+		Light.Upload(mLight, program);
 		
-		Draw.draw(mSettings, mVAO);
+		Draw.Draw(mSettings, mVAO);
 		
 		mVAO.unbind();
 		
@@ -314,6 +378,24 @@ public class Renderable {
 		if(mLight.size() > 0 )
 			return mLight.get(0);
 		return null;
+	}
+
+	public Type shading() {
+		return mShading;
+	}
+
+	public Texturing.Type texturingType() {
+		if(mTextures.size() < 1)
+			return Texturing.Type.NONE;
+		
+		return  ShaderComposer.CHECK_TEXTURING(this);
+	}
+
+	public Light.Type lightType() {
+		if( mLight.size() < 1)
+			return Light.Type.NONE;
+		
+		return mLight.get(0).type();
 	}
 	
 	

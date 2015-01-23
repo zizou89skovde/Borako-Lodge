@@ -1,6 +1,14 @@
 package com.lodge.gl.shader;
 
 import com.lodge.err.GLError;
+import com.lodge.gl.Renderable;
+import com.lodge.gl.shader.components.Shading;
+import com.lodge.gl.shader.components.Texturing;
+import com.lodge.gl.shader.components.Shading.Type;
+import com.lodge.gl.utils.Light;
+import com.lodge.gl.utils.Shader;
+import com.lodge.gl.utils.Texture;
+import com.lodge.gl.utils.VAO;
 import com.lodge.misc.StringUtils;
 
 public class ShaderComposer {
@@ -23,6 +31,21 @@ public class ShaderComposer {
 
 	public static final String MAIN_START = "//START OF SHADER \nvoid main(void)" + "\n" + "{\n";
 	public static final String MAIN_END = "} // END OF SHADER \n";
+
+	
+	
+	public static Shader create(Renderable renderable) {
+		
+		CHECK_SHADING(renderable);
+		CHECK_TEXTURING(renderable);
+		String vs = VertexShader.create(renderable);
+		String fs = FragmentShader.create(renderable);
+		
+		return  new Shader(vs, fs, renderable.getVAO());
+		
+	}
+	
+	
 
 	
 
@@ -67,17 +90,37 @@ public class ShaderComposer {
 	}
 
 
-	/********************************************************************************
-	 * Attribute function. (in/out in GLSL)
-	 * 
-	 * 
-		//Check dependencies. Is sufficient attributes supported to perform selected shading
-		Shading.CHECK_DEP(SHADING, vsIn);
-	 *********************************************************************************/
-
-	/********************************************************************************
-	 * Transform functions. (Product of Model to world- , view and projection matrices etc. )
-	 *********************************************************************************/
+	public static Texturing.Type CHECK_TEXTURING(Renderable renderable){
+		Texture texture = renderable.getTexture();
+		VAO vao = renderable.getVAO();
+		boolean hasTexture = false;
+		if(texture != null)
+			hasTexture = true;
+		
+		boolean hasTextureCoords = Texturing.HAS_TCOORDS(vao.getAttributesString());
+		
+		if(!hasTextureCoords && hasTexture){
+			GLError.warn("Vertex shader: Has texture coords but no attached texture");
+			
+			return Texturing.Type.TEXTURED_VPOS;
+		}
+		
+		if(hasTextureCoords && !hasTexture){
+			GLError.exit("Vertex shader: Has attached texture but no texture coords");
+		}
+		
+		return Texturing.Type.TEXTURED_TCOORDS;
+	}
+	
+	public static void CHECK_SHADING(Renderable r){
+		Shading.Type s = r.shading();
+		Light.Type l   = r.lightType();
+		
+		if(s == Type.PHONG && l == Light.Type.NONE)
+			GLError.exit("CHECK SHADING: Cant create phong shader without light source");
+		
+	
+	}
 
 
 

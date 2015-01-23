@@ -1,9 +1,10 @@
 package com.lodge.gl.utils;
 
-import com.lodge.err.GLError;
-import com.lodge.math.UtilMatrix;
 import android.opengl.GLES30;
 import android.opengl.Matrix;
+
+import com.lodge.err.GLError;
+import com.lodge.math.UtilMatrix;
 
 
 public class Transform {
@@ -26,6 +27,9 @@ public class Transform {
 	private float[] mRotate;
 	private float[] mScale;
 	//private float[] mArbRotate; // TODO: ArbRotate
+
+	private float[] mNormalMatrix = new float[9];
+	private float[] mModelViewMatrix = new float[16];
 
 	private Type mType;
 
@@ -62,14 +66,14 @@ public class Transform {
 			s[1] = "u_VMatrix";
 			s[2] = "u_NormalMatrix";
 			break;
-			
+
 		case P:
 			s = new String[1];
 			s[0] = "u_PMatrix";
-			
+
 		default:
 			GLError.exit("Transform: Invalid type");
-		
+
 
 		}
 		return s;
@@ -123,21 +127,21 @@ public class Transform {
 
 	public void upload(int program, float[] projection, float[] view){
 		int location;
-		float[] normalMatrix;
-		
+
+
 		String[] name = getShaderNames(mType);
-		
+
 		switch(mType){
 
 		case MVP: 
 
 			computeMatrix();
 
-			float[] MV_Matrix  =  new float[16];
+
 			float[] MVPMatrix  =  new float[16];		
 
-			Matrix.multiplyMM(MV_Matrix,0, view, 0, mMatrix, 0);
-			Matrix.multiplyMM(MVPMatrix,0, projection, 0, MV_Matrix, 0); 
+			Matrix.multiplyMM(mModelViewMatrix,0, view, 0, mMatrix, 0);
+			Matrix.multiplyMM(MVPMatrix,0, projection, 0, mModelViewMatrix, 0); 
 
 
 			location = GLES30.glGetUniformLocation(program, name[0]);
@@ -149,20 +153,21 @@ public class Transform {
 			location   = GLES30.glGetUniformLocation(program, name[1]);
 			checkLocation(location);
 
-			GLES30.glUniformMatrix4fv(location, 1, false, MV_Matrix, 0);
+			GLES30.glUniformMatrix4fv(location, 1, false, mModelViewMatrix, 0);
 
 
 			location = GLES30.glGetUniformLocation(program, name[2]);
 			checkLocation(location);
 
-			normalMatrix = UtilMatrix.InverseTranspose(MV_Matrix);
-			GLES30.glUniformMatrix3fv(location, 1, false, normalMatrix, 0);
+			mNormalMatrix = UtilMatrix.InverseTranspose(mModelViewMatrix);
+			GLES30.glUniformMatrix3fv(location, 1, false, mNormalMatrix, 0);
 
 			break;
 
 		case VP:
 
 			float[] VPMatrix  =  new float[16];		
+			mModelViewMatrix = view.clone();
 
 			Matrix.multiplyMM(VPMatrix,0, projection, 0, view, 0);
 			location = GLES30.glGetUniformLocation(program, name[0]);
@@ -179,8 +184,8 @@ public class Transform {
 			location = GLES30.glGetUniformLocation(program, name[2]);
 			checkLocation(location);
 
-			normalMatrix = UtilMatrix.InverseTranspose(view);
-			GLES30.glUniformMatrix3fv(location, 1, false, normalMatrix, 0);
+			mNormalMatrix = UtilMatrix.InverseTranspose(view);
+			GLES30.glUniformMatrix3fv(location, 1, false, mNormalMatrix, 0);
 			break;
 		case P: 
 
@@ -202,6 +207,18 @@ public class Transform {
 
 	public Type type() {
 		return mType;
+	}
+
+	public float[] normalixMatrix() {
+		if(mType == Type.MVP || mType == Type.VP)
+			return mNormalMatrix;
+		return null;
+	}
+
+	public float[] toViewMatrix() {
+		if(mType == Type.MVP || mType == Type.VP )
+			return mModelViewMatrix;
+		return null;
 	}
 
 }

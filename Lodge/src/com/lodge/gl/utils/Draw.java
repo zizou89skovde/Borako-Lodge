@@ -9,7 +9,7 @@ public class Draw {
 		ELEMENTS_INSTANCED,
 	}
 	
-	public static void draw(Settings settings,VAO vao){
+	public static void Draw(Settings settings,VAO vao){
 		switch(settings.mDrawMethod){
 		
 		case ELEMENTS:

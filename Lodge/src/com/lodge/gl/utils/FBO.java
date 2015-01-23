@@ -133,6 +133,14 @@ public class FBO {
 		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER,0);
 		GLES30.glViewport(0, 0, w, h);
 	}
+	public static void useScreen(int[] wh){
+		
+		if(wh == null || wh.length != 2)
+			GLError.exit("FBO: Invalid Screen Dimension");
+		
+		GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER,0);
+		GLES30.glViewport(0, 0, wh[0], wh[1]);
+	}
 
 	/**
 	 * Add render target to the fbo. Note that this instance is not responsible of free memory of the additional 

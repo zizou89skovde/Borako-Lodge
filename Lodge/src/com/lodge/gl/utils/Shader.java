@@ -43,6 +43,9 @@ public class Shader {
 		String[] attributes = vao.getAttributesString();
 		
 		mProgram = createProgram(vs, fs, attributes);
+		vao.bind();
+		vao.enableAttributes(mProgram);
+		vao.unbind();
 	}
 	
 	public void use(){

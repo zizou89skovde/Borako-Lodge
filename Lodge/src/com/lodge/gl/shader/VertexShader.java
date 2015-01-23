@@ -1,6 +1,6 @@
 package com.lodge.gl.shader;
 
-import com.lodge.err.GLError;
+
 import com.lodge.gl.Renderable;
 import com.lodge.gl.shader.components.Attributes;
 import com.lodge.gl.shader.components.Lightning;
@@ -8,44 +8,13 @@ import com.lodge.gl.shader.components.Shading;
 import com.lodge.gl.shader.components.Texturing;
 import com.lodge.gl.shader.components.VSTransform;
 import com.lodge.gl.utils.Light;
-import com.lodge.gl.utils.Texture;
 import com.lodge.gl.utils.Transform;
 import com.lodge.gl.utils.VAO;
 
 public class VertexShader {
 
 	
-	
-	static Texturing.Type CHECK_TEXTURING(VAO vao,Texture texture){
-		boolean hasTexture = false;
-		if(texture != null)
-			hasTexture = true;
-		
-		boolean hasTextureCoords = Texturing.HAS_TCOORDS(vao.getAttributesString());
-		
-		if(!hasTextureCoords && hasTexture){
-			GLError.warn("Vertex shader: Has texture coords but no attached texture");
-			
-			return Texturing.Type.TEXTURED_VPOS;
-		}
-		
-		if(hasTextureCoords && !hasTexture){
-			GLError.exit("Vertex shader: Has attached texture but no texture coords");
-		}
-		
-		return Texturing.Type.TEXTURED_TCOORDS;
-	}
-	
-	static Light.Type CHECK_LIGHT(Light light, Shading.Type shading){
-		
-		if(light == null)
-			return Light.Type.NONE;
-		
-		if(shading == Shading.Type.NONE)
-			return Light.Type.NONE;
-		
-		return light.type();
-	}
+
 	
 	
 	public static String create(Renderable renderable){
@@ -55,12 +24,11 @@ public class VertexShader {
 		
 		Shading.Type shadingType = Shading.Type.PHONG;
 		
-		Texture	  texture	= renderable.getTexture();
-		Texturing.Type texturingType = CHECK_TEXTURING(vao,texture);
+		
+		Texturing.Type texturingType = renderable.texturingType();
 		String[] transforms = Transform.getShaderNames(transform.type());
 		
-		Light light = renderable.getLight();
-		Light.Type lightningType = CHECK_LIGHT(light, shadingType);
+		Light.Type lightningType = renderable.lightType();
 		String[] lightLabal = new String[]{Light.LABEL_LIGHT_DIR};
 		
 	
@@ -77,7 +45,7 @@ public class VertexShader {
 		
 		vertexShader += Attributes.VS_OUT_DECLARE(shadingType,texturingType);
 		
-		vertexShader += Lightning.FS_DECLARE(lightningType, lightLabal, "out");
+		vertexShader += Lightning.FS_DECLARE(lightningType, "out");
 		
 		
 		///////////////////// MAIN BODY STARTS HERE /////////////////////////

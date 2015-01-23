@@ -6,7 +6,6 @@ import com.lodge.ui.UserInput;
 import android.content.Context;
 
 import android.opengl.GLSurfaceView;
-import android.transition.Scene;
 import android.view.MotionEvent;
 
 public class LodgeSurfaceView extends GLSurfaceView {

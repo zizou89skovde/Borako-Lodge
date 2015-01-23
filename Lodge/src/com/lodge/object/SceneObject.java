@@ -31,4 +31,5 @@ public class SceneObject {
 	public boolean renderDepth(){
 		return mRenderable.renderDepth();
 	}
+
 }
