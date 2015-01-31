@@ -8,7 +8,7 @@ public class UtilMatrix {
 	static public float[] InverseTranspose(float[] in)
 	{
 		float a11, a12, a13, a21, a22, a23, a31, a32, a33;
-		float[] out = new float[16];
+		float[] out = new float[9];
 
 		// Copying to internal variables
 		a11 = in[0];
@@ -45,19 +45,35 @@ public class UtilMatrix {
 		float[] res = new float[3];
 		int o = 0;
 		for(int i = 0; i < 3; i ++){
-			res[i] = m[o]*v[1] + m[o+1]*v[1] + m[o+2]*v[2];
+			res[i] = m[o]*v[0] + m[o+1]*v[1] + m[o+2]*v[2];
 			o+=3;
+//			res[i] = m[o]*v[0] + m[o+3]*v[1] + m[o+6]*v[2];
+//			o+=1;
 		}
 		return res;
 	}
 
 	public static float[] M4V4(float[] m, float[] v) {
-		float[] res = new float[3];
+		float[] res = new float[4];
 		int o = 0;
 		for(int i = 0; i < 4; i ++){
-			res[i] = m[o]*v[1] + m[o+1]*v[1] + m[o+2]*v[2] + + m[o+3]*v[3];
+			res[i] = m[o]*v[0] + m[o+1]*v[1] + m[o+2]*v[2] + + m[o+3]*v[3];
 			o+=4;
+			
+//			res[i] = m[o]*v[0] + m[o+4]*v[1] + m[o+8]*v[2] + + m[o+12]*v[3];
+//			o+=1;
 		}
 		return res;
+	}
+	
+	public static float[] M4ToM3(float[] m4){
+		float[] m3 = new float[9];
+		int j = 0;
+		for (int i = 0; i < 12; i+=4) {
+			m3[j++] = m4[i];
+			m3[j++] = m4[i+1];
+			m3[j++] = m4[i+2];
+		}
+		return m3;
 	}
 }

@@ -1,7 +1,7 @@
 package com.lodge.gl.utils;
 import android.opengl.GLES30;
 
-public class Draw {
+public class DrawMethod {
 
 	
 	public enum Method{

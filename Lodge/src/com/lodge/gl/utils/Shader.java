@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import com.lodge.err.GLError;
+
 import android.content.res.Resources;
 import android.opengl.GLES30;
 import android.util.Log;
@@ -102,8 +104,9 @@ public class Shader {
 			final int[] status = new int[1];
 			GLES30.glGetShaderiv(shaderHandle, GLES30.GL_COMPILE_STATUS, status, 0);
 			if (status[0] == 0){
-				Log.e("GL_ERROR", "Compilation error : " + GLES30.glGetShaderInfoLog(shaderHandle));
+				GLError.exit("Compilation error : " + GLES30.glGetShaderInfoLog(shaderHandle));
 				GLES30.glDeleteShader(shaderHandle);
+				
 				shaderHandle = 0;
 			}
 		}

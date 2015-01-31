@@ -5,18 +5,16 @@ import java.util.Vector;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.opengl.GLES30;
-import android.util.Log;
 
 import com.lodge.err.GLError;
 import com.lodge.gl.model.ModelData;
 import com.lodge.gl.model.ModelLoader;
 import com.lodge.gl.shader.ShaderComposer;
-import com.lodge.gl.shader.components.Shading;
-import com.lodge.gl.shader.components.Shading.Type;
+import com.lodge.gl.shader.components.Lightning.Type;
+import com.lodge.gl.shader.components.ShaderVariables;
 import com.lodge.gl.shader.components.Texturing;
-import com.lodge.gl.utils.Draw;
-import com.lodge.gl.utils.Draw.Method;
+import com.lodge.gl.utils.DrawMethod;
+import com.lodge.gl.utils.DrawMethod.Method;
 import com.lodge.gl.utils.Light;
 import com.lodge.gl.utils.Settings;
 import com.lodge.gl.utils.Shader;
@@ -45,74 +43,76 @@ import com.lodge.scene.LodgeScene;
  * @author Datorn
  *
  */
-public class Renderable {
-	
+abstract public class Renderable {
+
 	Resources mResources;
 	private LodgeScene			mScene;
 	private VAO 				mVAO;
 	private Shader 				mShader;
 	protected Transform 		mTransform;
 	protected Settings			mSettings;
-	
+
 	private Vector<VBO>			mVBOs;
 	private Vector<Uniform>  	mUniforms;
 	private Vector<Texture> 	mTextures;
 	private Vector<Light> 		mLight;
 	private float[]				mColor;
-	
+
 	private float[]				mOrigin = new float[3];
-	
-	
+	ShaderVariables 			mShaderVariables = new ShaderVariables();
+
+
 	private boolean mInitialized;
-	
+
 	/*
 	 * Shader Related items
 	 */
-	Shading.Type mShading = Shading.Type.PHONG;
-	Shading.Type mTexturing;
-	
-	
+	private Type mLightning = Type.PHONG;
+	private Texturing.Type mTexturing = Texturing.Type.NONE;
+
+
+
 	boolean mRenderDepth;
-	
-	
+
+
 	public Renderable(Resources res,LodgeScene scene){
 		// Store reference to resources 
 		mResources = res;
-		
+
 		mScene = scene;
-		
+
 		// Create lists
 		mVBOs 	  = new Vector<VBO>();
 		mUniforms = new Vector<Uniform>();
 		mTextures = new Vector<Texture>();
-		
+
 		//Setup up light sources
 		mLight 	  = new Vector<Light>();
 		setLights();
 
 		//Set some default settings
 		mSettings = new Settings();
-		mSettings.mDrawMethod = Draw.Method.ELEMENTS;
-		
+		mSettings.mDrawMethod = DrawMethod.Method.ELEMENTS;
+
 		// To be used for light depth rendering
 		mRenderDepth = false;
 		mInitialized = false;
-		
+
 		// Default transform is MVP
 		setTransformType(Transform.Type.MVP);
 
 		//Default positions in 0 
 		mTransform.translate(0, 0, 0);
-		
+
 	}
-	
+
 	/**
 	 * Run initially and thereafter every fram. Checks which light that are affecting this renderable.
 	 */
 	private void setLights(){
 		mScene.setLights(mLight,mOrigin);
 	}
-	
+
 	/**
 	 * 
 	 * Set shader. The VBOs should be set before shader is set.
@@ -122,12 +122,14 @@ public class Renderable {
 	 */
 	protected void setShader(int vs,int fs){
 		if(mVBOs.size() < 1){
-			Log.e("GL_ERROR","Set VBOs before compile shaders");
+			GLError.exit("Set VBOs before compile shaders");
 			return;
 		}
 		mShader = new Shader(mResources,vs,fs,mVAO);
 	}
-	
+
+
+
 	/**
 	 * Load model from resources. Create VAO & VBOs.
 	 * @param resId
@@ -143,9 +145,9 @@ public class Renderable {
 	 */
 	protected void setModel(int resId, boolean useNormal, boolean useTextureCoords){
 		if(mVAO != null){
-			Log.e("GL_ERROR", "VAO already exist. Previous VAO and its content will be deallocated");
-			
-			
+			GLError.warn("VAO already exist. Previous VAO and its content will be deallocated");
+
+
 			for (VBO vbo : mVBOs) {
 				vbo.release();
 			}	
@@ -153,45 +155,45 @@ public class Renderable {
 			mVAO.release();
 			mVAO = null;
 		}
-		
+
 		mVAO = new VAO();
 		mVAO.bind();
-		
-		
+
+
 		ArrayList<ModelData> modelData = ModelLoader.getModelDataSingleThread(resId, mResources);
 		mVBOs.add(new VBO(3, modelData.get(0).positionArray,VBO.LABEL_POSITION));
-		
+
 		mVBOs.add(new VBO(-1,modelData.get(0).indexArray,null));
-		
+
 		if(useNormal && modelData.get(0).normalArray!= null){
 			mVBOs.add(new VBO(3, modelData.get(0).normalArray,VBO.LABEL_NORMAL));
 		}
-		
+
 		if(useTextureCoords && modelData.get(0).textureCoordArray != null){
 			mVBOs.add(new VBO(3, modelData.get(0).textureCoordArray,VBO.LABEL_TEXCOORD));
 		}
-		
+
 		mVAO.setIndexCount(modelData.get(0).indexArray.length);
 		mVAO.addVBO(mVBOs);
 		mVAO.unbind();
 	}
-	
-	
-	
+
+
+
 	void addVBO(float[] data,int stride,String label){
-		
+
 		// Bind mVAO 
 		mVAO.bind();
-		
+
 		// Create VBO 
 		VBO vbo = new VBO(stride, data, label);
-		
+
 		//If previous VBO items are instance make this VBO instances as well
 		// with 0 as divisor.
 		if(mVAO.isInstanced())
 			vbo.makeInstanced(0);
 		mVBOs.add(vbo);
-		
+
 		// Re-enable vertex attributes
 		mVAO.enableAttributes(mShader.get());
 	}
@@ -203,55 +205,65 @@ public class Renderable {
 	 * @param label
 	 */
 	void setIBO(short[] data,int stride,String label){
-		
+
 		// Bind mVAO 
 		mVAO.bind();
-		
+
 		// Create VBO 
 		VBO vbo = new VBO(stride, data, label);
-		
+
 		//If previous VBO items are instance make this VBO instances as well
 		// with 0 as divisor.
 		if(mVAO.isInstanced())
 			vbo.makeInstanced(0);
 		mVBOs.add(vbo);
-		
+
 		// Re-enable vertex attributes
 		mVAO.enableAttributes(mShader.get());
 	}
-	
+
 	void setInstancedVBO(float[] data,int stride){
-		
-	
+
+
 		// Bind mVAO 
 		mVAO.bind();
-		
+
 		// Make all previous VBO's divided by 0
 		for (VBO vbo : mVBOs) {
 			vbo.makeInstanced(0);
 		}
-		
+
 		VBO vbo = new VBO(stride, data, VBO.LABEL_INSTANCED);
-		
+
 		// Make new vertex attribute divided by 1. Means that #stride of floats will 
 		// be passed to the vertex shader for each instanced draw.
 		vbo.makeInstanced(1);
 		mVBOs.add(vbo);
-		
+
 		// Re-enable vertex attributes
 		mVAO.enableAttributes(mShader.get());
-		
+
 		mVAO.unbind();
 	}
-	
+
 	protected void addTexture(int id,String label){
 		mTextures.add(new Texture(mResources,id,mSettings.mMipMapEnabled, label));
 	}
-	
+
+	protected void addTexture(Texture texture, float[] repeat){
+		Texture t = new Texture(texture);
+		t.setRepeat(repeat);
+		mTextures.add(t);
+	}
+
+
 	public void setColor(float r, float g, float b, float a){
+		if(mTextures.size() != 0){
+			GLError.exit("Trying to set color when textures has been attached");
+		}
 		mColor = new float[] {r,g,b,a};
 	}
-	
+
 	public String colorString() {
 		if(mColor == null)
 			GLError.exit("Renderable does not contain texture or color ");
@@ -269,15 +281,18 @@ public class Renderable {
 	protected void addTexture(Texture texture){
 		mTextures.add(texture);
 	}
-	
+
 	protected void addTexture(Bitmap bitmap,String label){
+		if(mColor != null){
+			GLError.exit("Trying to attach texture when color has been set");
+		}
 		mTextures.add(new Texture(bitmap,mSettings.mMipMapEnabled, label));
 	}
-	
+
 	protected void addLight(Light l){
 		mLight.add(l);
 	}
-	
+
 	protected void setTransformType(Transform.Type type){
 		mTransform = new Transform(type);
 	}
@@ -288,24 +303,24 @@ public class Renderable {
 	 * @param label Name of uniform variable in shader.
 	 */
 	protected void setUniform(float[] data,String label){
-			Uniform uniform = null;
-			for (Uniform u : mUniforms) {
-				if(u.equals(label)){
-					uniform  = u;
-				}
+		Uniform uniform = null;
+		for (Uniform u : mUniforms) {
+			if(u.equals(label)){
+				uniform  = u;
 			}
-			
-			if(uniform != null){
-				uniform.set(data, data.length);
-				uniform.upload(mShader.get());
-			}else{
-				uniform = new Uniform(label, data, data.length);
-				uniform.upload(mShader.get());
-				mUniforms.add(uniform);
-			}
+		}
+
+		if(uniform != null){
+			uniform.set(data, data.length);
+			uniform.upload(mShader.get());
+		}else{
+			uniform = new Uniform(label, data, data.length);
+			uniform.upload(mShader.get());
+			mUniforms.add(uniform);
+		}
 	}
 
-	
+
 	/**
 	 * Runs only first frame.
 	 */
@@ -317,37 +332,37 @@ public class Renderable {
 			mShader = ShaderComposer.create(this);
 		}
 		mInitialized = true;
-		
+
 	}
-	
+
 
 
 	public void render(float[] projection,float[] view){
-		
+
 		init();
-				
+
 		int program  = mShader.get();
-		
+
 		mShader.use();
-		
+
 		mVAO.bind();
-		
+
 		Texture.Bind(mTextures,program);
-		
+
 		mTransform.upload(program, projection, view);
-		
-		Light.Upload(mLight, program);
-		
-		Draw.Draw(mSettings, mVAO);
-		
+
+		Light.Upload(mLight,program,mTransform); // TODO: do this once for every new light, this should not be done no light model has been selected
+
+		DrawMethod.Draw(mSettings, mVAO);
+
 		mVAO.unbind();
-		
+
 		mShader.unuse();
-		
-		
+
+
 	}
-	
-	
+
+
 	protected void setDrawMethod(Method method){
 		mSettings.mDrawMethod = method;
 	}
@@ -355,7 +370,7 @@ public class Renderable {
 	public boolean renderDepth() {
 		return mRenderDepth;
 	}
-	
+
 	protected void setDepthRendering(boolean bool){
 		mRenderDepth = bool;
 	}
@@ -368,10 +383,12 @@ public class Renderable {
 		return mVAO;
 	}
 
-	public Texture getTexture() {
-		if(mTextures.size() > 0)
-			return mTextures.get(0);
-		return null;
+	public Texture getTexture(String key) {
+		return mScene.getTexture(key);
+	}
+
+	public Vector<Texture> getTextures(){
+		return mTextures;
 	}
 
 	public Light getLight() {
@@ -380,28 +397,61 @@ public class Renderable {
 		return null;
 	}
 
-	public Type shading() {
-		return mShading;
+	public Type lightning() {
+		return mLightning;
+	}
+	
+	public void shading(Type shading) {
+		mLightning = shading;
 	}
 
-	public Texturing.Type texturingType() {
+	public Texturing.Type texturing() {
 		if(mTextures.size() < 1)
 			return Texturing.Type.NONE;
-		
+
+		if(mTextures.get(0).hasNormalMap()){
+
+		}
 		return  ShaderComposer.CHECK_TEXTURING(this);
 	}
+
+	public boolean hasTexture() {
+		return mTextures.size() > 0;
+	}
+
+	public boolean hasNormalMap() {
+		if(mTextures.size() < 1)
+			return false;
+
+		return mTextures.get(0).hasNormalMap();
+
+	}
+
+
 
 	public Light.Type lightType() {
 		if( mLight.size() < 1)
 			return Light.Type.NONE;
-		
+
 		return mLight.get(0).type();
 	}
-	
-	
-	
-	
-	
-	
+
+	public void setTexturingType(Texturing.Type t) {
+		mTexturing = t;
+	}
+
+	public Texturing.Type getTexturingType() {
+		return mTexturing;
+	}
+
+	public Texture getTexture(int i) {
+		return mTextures.get(i);
+	}
+
+
+	public ShaderVariables getShaderVariables(){
+		return mShaderVariables;
+	}
+
 
 }

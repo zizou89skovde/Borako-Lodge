@@ -1,6 +1,10 @@
 package com.lodge.gl.shader.components;
 
+import java.util.ArrayList;
+import java.util.Vector;
+
 import com.lodge.err.GLError;
+import com.lodge.gl.Renderable;
 import com.lodge.gl.shader.ShaderComposer;
 import com.lodge.gl.utils.Texture;
 import com.lodge.gl.utils.VBO;
@@ -16,7 +20,7 @@ public class Texturing {
 	}
 
 	final static String TEXTURE_TYPE = "uniform sampler2D";
-
+	final static String COLOR_NAME 	 = "color";
 
 	public static boolean HAS_TCOORDS(String[] attr){
 		int len = attr.length;
@@ -30,9 +34,9 @@ public class Texturing {
 
 	}
 
-	public static String[] FS_ATTR_DECLARE(Type t, String inout){
+	public static String[] FS_ATTR_DECLARE(Renderable rend){
 		String[] s = null;
-		switch(t){
+		switch(rend.getTexturingType()){
 
 		case TEXTURED_TCOORDS:
 		case TEXTURED_VPOS:
@@ -47,53 +51,111 @@ public class Texturing {
 			break;
 
 		}
-		
-		return s;
+			return s;
+	}
+	
+	public static String FS_ATTR_DECLARE_(Renderable rend){
+		String[] s = null;
+		switch(rend.texturing()){
 
+		case TEXTURED_TCOORDS:
+		case TEXTURED_VPOS:
+		case TEXTURED_VPOS_REPEATED:
+			s = new String[1];
+			s[0] =  Attributes.LABEL_ATTR_FS_TCOORD;
+		case NONE:
+			break;
+
+		default:
+			GLError.exit("Texturing: invalid type");
+			break;
+
+		}
+		if(s != null)
+			return s[0];
+		
+		return "";
 	}
 
-	public static String VS_MAIN(Type t, float[] repeat){
+	public static String VS_MAIN(Renderable r){
 		String[] shading = null;
-		switch(t)
+		ShaderVariables sv = r.getShaderVariables();
+		String outTCoord = Attributes.LABEL_ATTR_FS_TCOORD;
+		switch(r.getTexturingType())
 		{
 		case TEXTURED_TCOORDS:
 			shading = new String[1];
-			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_TCOORD + " = " + VBO.LABEL_TEXCOORD;
+			shading[0] = ShaderComposer.TAB + outTCoord + " = " + sv.texcoord();
+			sv.texcoord(outTCoord);
 			break;
 		case TEXTURED_VPOS:
 			shading = new String[1];
-			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_TCOORD + " = " + "(" + VBO.LABEL_POSITION + ".xy+1.0)*0.5";
+			shading[0] = ShaderComposer.TAB + outTCoord + " = " + "(" + sv.position() + ".xy+1.0)*0.5";
+			sv.texcoord(outTCoord);
 			break;
 		case TEXTURED_VPOS_REPEATED:
+			Texture  t = r.getTexture(0);
+			float repeat[] = t.getRepeated();
 			shading = new String[1];
-			shading[0] = ShaderComposer.TAB + Attributes.LABEL_ATTR_FS_TCOORD + " = " + VBO.LABEL_POSITION + " * vec2("  + String.valueOf(repeat[0])+ "," + String.valueOf(repeat[1]) + ")";
+			shading[0] = ShaderComposer.TAB + outTCoord + " = (" + sv.position() + ".xy+1.0) * vec2("  + String.valueOf(repeat[0])+ "," + String.valueOf(repeat[1]) + ")";
+			sv.texcoord(outTCoord);
 			break;
 		case NONE:
-			shading = new String[]{""};
+			shading = null;
 			break;
 		default:
 			GLError.exit("Texturing : Invalid Type");
 			break;
 		}
-		return ShaderComposer.FORMAT_LINE(shading);
+		
+		
+		
+		if(shading!= null)
+			return ShaderComposer.FORMAT_LINE(shading);
+		
+		return "";
 	}
 
-	public static String FS_MAIN(Type t,String str){
+	public static String FS_MAIN(Renderable renderable){
+		String[] s = null;
+		Vector<Texture> textures = renderable.getTextures();
+		ShaderVariables sv = renderable.getShaderVariables();
+		if(textures.size() == 0){
+			s = new String[1];
+			String color = renderable.colorString();
+			if(color == null)
+				GLError.exit("NO COLOR NO TEXTURE");
+			s[0] = ShaderComposer.TAB +  "vec4 " + COLOR_NAME + " = vec4(" + color  + ")";
+		} else{
+			
+			ArrayList<String> colorList = new ArrayList<String>();
+			//TODO: Enable multitexturing (NOT HIGH PRIO) : COLOR_i , only usage when have a texturemap, which is mucho worko.
+			for (Texture texture : textures) {
+				colorList.add(ShaderComposer.TAB +  "vec4 " + COLOR_NAME + " = texture(" + texture.getLabel() + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");");
+				if(texture.hasNormalMap()){
+					Texture normalmap = texture.getNormalMap();
+					colorList.add(ShaderComposer.TAB +  "vec3 n = texture(" + normalmap.getLabel() + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");");
+				}
+				
+			}
+			s = colorList.toArray(new String[colorList.size()]);
+		}
 		
-		
-		String[] s = new String[1];
-		if(t == Type.NONE )
-			s[0] = ShaderComposer.TAB +  "vec4 color = vec4(" + str + ")";
-		else
-			s[0] = ShaderComposer.TAB +  "vec4 color = texture(" + str + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");";
-		
-
-		return ShaderComposer.FORMAT_LINE(s);
+		//Set color variable name
+		sv.color(COLOR_NAME);
+		if(s != null)
+			return ShaderComposer.FORMAT_LINE(s);
+		return "";
 	}
 
-	public static String FS_TEXTURE_DECLARE(Texture texture) {
-		String[] s = new String[1];
-		s[0] = TEXTURE_TYPE + " " + texture.getLabel();
+	public static String FS_TEXTURE_DECLARE(Renderable rend) {
+		Vector<Texture> textures = rend.getTextures();
+		String[] s = new String[textures.size()];
+		int i = 0;
+		for (Texture t : textures) {
+			s[i++] = TEXTURE_TYPE + " " + t.getLabel();
+		}
+		
 		return ShaderComposer.FORMAT_LINE(s);
 	}
 }

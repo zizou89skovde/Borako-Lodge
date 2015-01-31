@@ -1,17 +1,30 @@
 package com.lodge.gl.shader.components;
 
 import java.util.ArrayList;
+
 import com.lodge.err.GLError;
+import com.lodge.gl.Renderable;
 import com.lodge.gl.shader.ShaderComposer;
+import com.lodge.gl.shader.components.Lightning.Type;
 import com.lodge.gl.utils.VAO;
+import com.lodge.gl.utils.VBO;
 import com.lodge.misc.StringUtils;
 
 public class Attributes {
 
 
-	public static String LABEL_ATTR_FS_POS    = "f_Position";
-	public static String LABEL_ATTR_FS_NORMAL = "f_Normal";
-	public static String LABEL_ATTR_FS_TCOORD = "f_Texcoord";
+	final static String FS_IN_POSITION    = "f_Position";
+	final static String FS_IN_NORMAL = "f_Normal";
+	final static String LABEL_ATTR_FS_TCOORD = "f_Texcoord";
+
+	public final static String LABEL_INTERNAL_POS    = "position";
+	public final static String LABEL_INTERNAL_NORM   = "normal";
+	public final static String LABEL_INTERNAL_TCOORD = "texcoord";
+
+	final static String[] LABEL_INTERNAL = new String[]{LABEL_INTERNAL_POS,
+		LABEL_INTERNAL_NORM,
+		LABEL_INTERNAL_TCOORD
+	};
 
 	static String[] ATTR_TYPE(Integer[] sizeStr){
 
@@ -49,19 +62,19 @@ public class Attributes {
 
 	}
 
-	static String DECLARE(Shading.Type sShading,Texturing.Type sTexturing,String inout){
+	static String DECLARE(Renderable rend,String inout){
 		//Resulting String
 		ArrayList<String> temp = new ArrayList<String>();
 
 		//Attributes - Position & Normal
-		String[] vsAttr 	= Shading.ATTR_FS_DECLARE(sShading);
+		String[] vsAttr = ATTR_FS_DECLARE(rend);
 		if(vsAttr != null){
 			String[] vsAttrType = StringUtils.STR_SET(vsAttr.length, inout +" vec3 ");
 			String[] attrRows 	= StringUtils.CONCAT(vsAttrType,vsAttr);
 			StringUtils.APPEND(temp, attrRows);
 		}
 		//Attributes - Texture Coordinates		
-		String[] vsTCoord = Texturing.FS_ATTR_DECLARE(sTexturing,inout);
+		String[] vsTCoord = Texturing.FS_ATTR_DECLARE(rend);
 		if(vsTCoord != null){
 			String[] vsTCoordType = StringUtils.STR_SET(vsTCoord.length, inout +" vec2 ");
 			String[] tCoordRows = StringUtils.CONCAT(vsTCoordType,vsTCoord);
@@ -73,16 +86,38 @@ public class Attributes {
 		return ShaderComposer.FORMAT_LINE(res);
 	}
 
-	public static String FS_IN_DECLARE(Shading.Type sShading,Texturing.Type sTexturing){
-		return DECLARE(sShading, sTexturing, "in");
+	public static String FS_IN_DECLARE(Renderable renderable){
+		return DECLARE(renderable, "in");
 	}
 
-	public static String VS_OUT_DECLARE(Shading.Type sShading,Texturing.Type sTexturing){
-		return DECLARE(sShading, sTexturing, "out");	
+	public static String VS_OUT_DECLARE(Renderable renderable){
+		return DECLARE(renderable, "out");	
 	}
 
-	public static String VS_IN_DECLARE(VAO vao){
+	public static String VS_IN_DECLARE(Renderable rend){
+		VAO vao = rend.getVAO();
 		String[]  vsIn = vao.getAttributesString();
+		boolean hasNormals = false;
+		
+		
+		//Store names of the active variables 
+		ShaderVariables shadVar = rend.getShaderVariables();
+		for (int i = 0; i < vsIn.length; i++) {
+			if(vsIn[i].equals(VBO.LABEL_POSITION)){
+				shadVar.position(vsIn[i]);
+			}
+			if(vsIn[i].equals(VBO.LABEL_NORMAL)){
+				shadVar.normal(vsIn[i]);
+				hasNormals = true;
+					
+			}
+			if(vsIn[i].equals(VBO.LABEL_TEXCOORD)){
+				shadVar.texcoord(vsIn[i]);
+			}
+		}
+		if(rend.lightning() != Type.NONE && !hasNormals)
+			GLError.exit("Lightning has been enables but no normals available");
+		
 		Integer[] attrSize = vao.getAttributesSize();
 
 
@@ -100,6 +135,26 @@ public class Attributes {
 		return ShaderComposer.FORMAT_LINE(vsRows);
 
 	}
+	
+	static String[] ATTR_FS_DECLARE(Renderable r){
+		String[] attr = null;
+		switch(r.lightning()){
+
+		case PHONG:
+		case DIFFUSE:
+			attr = new String[2]; 
+			attr[0] = Attributes.FS_IN_POSITION;
+			attr[1] = Attributes.FS_IN_NORMAL;
+			break;
+		case NONE:
+			break;
+		default:
+			GLError.exit("Shading: Invalid shading type");
+		}
+		return attr;
+	}
+
+
 
 
 }

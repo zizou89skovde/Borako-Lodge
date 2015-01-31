@@ -2,7 +2,7 @@ package com.lodge.gl.utils;
 
 import android.opengl.GLES30;
 
-import com.lodge.gl.utils.Draw.Method;
+import com.lodge.gl.utils.DrawMethod.Method;
 
 public class Settings {
 

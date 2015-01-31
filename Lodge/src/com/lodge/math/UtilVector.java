@@ -310,7 +310,7 @@ public class UtilVector {
 	}
 
 	public static float[] expand(float[] v, int exp, float val) {
-		if(v.length > exp)
+		if(v.length >= exp)
 			GLError.exit("Vector: expand error size " );
 		
 		float[] res = new float[exp];
@@ -318,13 +318,17 @@ public class UtilVector {
 		for (int i = 0; i < v.length; i++) {
 			res[i] = v[i];
 		}
-		for (int i = 0; i < exp; i++) {
+		for (int i = 0; i < exp-v.length; i++) {
 			res[v.length + i] = val;
 		}
 		
 		return res;
 		
 		
+	}
+
+	public static float getLength3(float[] v1, float[] v2) {
+		return getLength(v1, v2,XYZ);
 	}
 
 

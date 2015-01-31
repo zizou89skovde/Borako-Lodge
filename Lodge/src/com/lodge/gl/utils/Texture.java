@@ -15,28 +15,30 @@ public class Texture {
 
 
 	private int mTexture[];
+	private Texture mNormalMap;
 	private String mLabel;
+	private float[] mRepeated;
 	private boolean isShared;
 	private boolean isMipmaped;
 
-/**
- * 
- * 
- * @param bitmap Bitmap instance
- * @param mipmapEnable mipmaping
- * @param label Name of the 2DSample unit in the shader
- */
+	/**
+	 * 
+	 * 
+	 * @param bitmap Bitmap instance
+	 * @param mipmapEnable mipmaping
+	 * @param label Name of the 2DSample unit in the shader
+	 */
 	public Texture(Bitmap bitmap,boolean mipmap,String label) {
 		defaultSetting(label, mipmap);
 		generateGLTexture(bitmap);
 	}
-/**
- * 
- * @param res Resource instance
- * @param id  Resource id
- * @param mipmap Enable mipmaping
- * @param label  Name of the 2DSample unit in the shader
- */
+	/**
+	 * 
+	 * @param res Resource instance
+	 * @param id  Resource id
+	 * @param mipmap Enable mipmaping
+	 * @param label  Name of the 2DSample unit in the shader
+	 */
 	public Texture(Resources res, int id,boolean mipmap,String label) {
 		defaultSetting(label, mipmap);
 
@@ -87,13 +89,17 @@ public class Texture {
 		isShared = true;
 		mLabel = label; 
 	}
-	
+
+	public void setNormalMap(Texture normalmap){
+		mNormalMap = normalmap.clone();
+	}
+
 	public Texture(Texture texture){
 		mTexture = new int[]{texture.get()};
 		isShared = true;
 		mLabel = texture.mLabel; 
 	}
-	
+
 	public Texture(Texture texture,String label){
 		mTexture = new int[]{texture.get()};
 		isShared = true;
@@ -110,7 +116,7 @@ public class Texture {
 		GLES20.glGenTextures(1, mTexture, 0);
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,mTexture[0]);
 		GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-	
+
 		if(isMipmaped){
 			GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);		
 			GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);	
@@ -126,8 +132,8 @@ public class Texture {
 		}
 
 	}
-	
-	
+
+
 
 
 	/**
@@ -146,35 +152,49 @@ public class Texture {
 		GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
 
 		GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
-		
+
 		return new Texture(t[0],label);
 
 	}
-	
+
 	public boolean equals(String label){
 		return mLabel.hashCode() == label.hashCode();
 	}
-	
-	
+
+
 	public Texture clone(){
-		 return new Texture(this);
+		return new Texture(this);
 	}
-	
-	
+
+
 	/**
 	 * 
 	 * @param program
 	 * @param count If shader has multiple texture count should be increment for each
 	 * texture that is binded during current pass. 
 	 */
-	public void select(int program,int count){
+	public int  select(int program,int count){
 		GLES20.glActiveTexture(GLES20.GL_TEXTURE0+count);
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
 		int location = GLES20.glGetUniformLocation(program, mLabel);
 		if(location < 0){
 			GLError.exit("Unused or invalid texture: " +mLabel );
 		}
+
 		GLES20.glUniform1i(location , count);
+		count++;
+		if(mNormalMap != null){
+			GLES20.glActiveTexture(GLES20.GL_TEXTURE0+count);
+			GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
+			location = GLES20.glGetUniformLocation(program, mLabel);
+			if(location < 0){
+				GLError.exit("Unused or invalid texture: " +mLabel );
+			}
+
+			GLES20.glUniform1i(location , count);
+			count++;
+		}
+		return count;
 	}
 
 	/**
@@ -183,15 +203,15 @@ public class Texture {
 	public void bind(){
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTexture[0]);
 	}
-	
-	
+
+
 	/**
 	 * Unbind texture
 	 */
 	public void unbind(){
 		GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
 	}
-	
+
 	/**
 	 *  If this texture is created outside this instance. It will not be deallocated here.
 	 * 
@@ -211,15 +231,27 @@ public class Texture {
 	public String getLabel() {
 		return mLabel;
 	}
-	
+
 	public static void Bind(Vector<Texture> t,int program){
 		int count = 0;
 		for (Texture texture : t) {
-			texture.select(program, count);
-			count++;
+			count = texture.select(program, count);
 		}
+
+	}
+	public boolean hasNormalMap() {
+		return mNormalMap != null;
+	}
+	public Texture getNormalMap() {
+		return mNormalMap;
+	}
+	public float[] getRepeated() {
+		return mRepeated;
+	}
+	public void setRepeat(float[] repeat) {
+		mRepeated = repeat;
 		
 	}
-	
+
 
 }

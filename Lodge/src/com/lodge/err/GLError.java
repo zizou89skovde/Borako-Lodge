@@ -17,7 +17,7 @@ public class GLError {
 	}
 	
 	public static void warn(String str){
-		Log.e(TAG,"MV/V transforms are not used");
+		Log.i(TAG,str);
 	}
 	
 	

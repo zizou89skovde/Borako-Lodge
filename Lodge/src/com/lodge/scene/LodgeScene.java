@@ -154,7 +154,12 @@ abstract public class LodgeScene {
 		for (Light l : mLights) {
 			if(l.type() == Light.Type.DIRECTIONAL)
 				rLights.add(l);
-			
+			else{
+				float d = l.distance(rOrigin);
+				if(d < Light.MAX_DISTANCE){
+					rLights.add(l);
+				}
+			}
 		}
 		
 	}

@@ -24,8 +24,8 @@ public class Camera {
 
 	public Camera() {
 		mCamera = new CameraInstance();
-		mCamera.setCamEye(new float[]{0,0,4});
-		mCamera.setCamCenter(new float[]{0,0,0});
+		mCamera.setCamEye(new float[]{0,4,4});
+		mCamera.setCamCenter(new float[]{0,4,0});
 	}
 
 	public void update(){
@@ -40,10 +40,10 @@ public class Camera {
 			float[] dir 	= mCamera.getLookDir();
 
 			eye[0] += dir[0]*deltaPos;
-			eye[1] += dir[1]*deltaPos;
+			eye[2] += dir[2]*deltaPos;
 
 			center[0] += dir[0]*deltaPos;
-			center[1] += dir[1]*deltaPos;
+			center[2] += dir[2]*deltaPos;
 
 //			if(!mSceneHandler.isCameraCollision(eye)){
 				mCamera.setCamEye(eye);

@@ -1,10 +1,10 @@
 package com.lodge.gl.shader;
 
+import java.util.Vector;
 import com.lodge.err.GLError;
 import com.lodge.gl.Renderable;
-import com.lodge.gl.shader.components.Shading;
+import com.lodge.gl.shader.components.Lightning.Type;
 import com.lodge.gl.shader.components.Texturing;
-import com.lodge.gl.shader.components.Shading.Type;
 import com.lodge.gl.utils.Light;
 import com.lodge.gl.utils.Shader;
 import com.lodge.gl.utils.Texture;
@@ -13,6 +13,8 @@ import com.lodge.misc.StringUtils;
 
 public class ShaderComposer {
 
+
+	
 	int VPOS    = 0;
 	int VNORM   = 0;
 	int VTCOORD = 0;
@@ -34,13 +36,16 @@ public class ShaderComposer {
 
 	
 	
+	
 	public static Shader create(Renderable renderable) {
 		
 		CHECK_SHADING(renderable);
-		CHECK_TEXTURING(renderable);
+		renderable.setTexturingType(CHECK_TEXTURING(renderable));
 		String vs = VertexShader.create(renderable);
 		String fs = FragmentShader.create(renderable);
-		
+		GLError.warn(vs);
+		GLError.warn(fs);
+
 		return  new Shader(vs, fs, renderable.getVAO());
 		
 	}
@@ -72,6 +77,12 @@ public class ShaderComposer {
 	 * Utility functions
 	 *********************************************************************************/
 
+	class Dependencies {
+		boolean hasTexture = false;
+		boolean hasNormalMap = false;
+		boolean hasLightShading = false;
+	}
+	
 	/***
 	 * 
 	 * @param strArr
@@ -85,35 +96,41 @@ public class ShaderComposer {
 		String[] formatStrArr = StringUtils.CONCAT(strArr, eofLine);
 
 		String resStr = StringUtils.ARR2STR(formatStrArr); 
-
+		
 		return resStr;
 	}
 
 
 	public static Texturing.Type CHECK_TEXTURING(Renderable renderable){
-		Texture texture = renderable.getTexture();
+		Vector<Texture> textures = renderable.getTextures();
 		VAO vao = renderable.getVAO();
 		boolean hasTexture = false;
-		if(texture != null)
+		if(textures.size() != 0)
 			hasTexture = true;
 		
 		boolean hasTextureCoords = Texturing.HAS_TCOORDS(vao.getAttributesString());
 		
+		
 		if(!hasTextureCoords && hasTexture){
 			GLError.warn("Vertex shader: Has texture coords but no attached texture");
-			
-			return Texturing.Type.TEXTURED_VPOS;
+			if(textures.get(0).getRepeated() == null)
+				return Texturing.Type.TEXTURED_VPOS;
+			else
+				return Texturing.Type.TEXTURED_VPOS_REPEATED;
 		}
 		
 		if(hasTextureCoords && !hasTexture){
 			GLError.exit("Vertex shader: Has attached texture but no texture coords");
 		}
 		
+		if(!hasTexture)
+			return Texturing.Type.NONE;
+		
 		return Texturing.Type.TEXTURED_TCOORDS;
 	}
 	
 	public static void CHECK_SHADING(Renderable r){
-		Shading.Type s = r.shading();
+		Type s = r.lightning();
 		Light.Type l   = r.lightType();
 		
 		if(s == Type.PHONG && l == Light.Type.NONE)

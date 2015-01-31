@@ -2,6 +2,7 @@ package com.lodge.gl.utils;
 
 import android.opengl.GLES30;
 import android.opengl.Matrix;
+import android.test.UiThreadTest;
 
 import com.lodge.err.GLError;
 import com.lodge.math.UtilMatrix;
@@ -50,9 +51,9 @@ public class Transform {
 
 	}
 
-	public static String[] getShaderNames(Type t){
+	public String[] getShaderNames(){
 		String[] s = null;
-		switch(t){
+		switch(mType){
 
 		case MVP:
 			s = new String[3];
@@ -85,7 +86,7 @@ public class Transform {
 	}
 
 	public void rotate(float x, float y, float z){
-		mTranslate = new float[]{x,y,z};
+		mRotate = new float[]{x,y,z};
 		hasBeenModified = true;
 	}
 
@@ -129,7 +130,7 @@ public class Transform {
 		int location;
 
 
-		String[] name = getShaderNames(mType);
+		String[] name = getShaderNames();
 
 		switch(mType){
 
@@ -158,8 +159,15 @@ public class Transform {
 
 			location = GLES30.glGetUniformLocation(program, name[2]);
 			checkLocation(location);
+			
+			float[] matI = new float[16];
+			Matrix.invertM(matI, 0, mModelViewMatrix, 0);
+			
+			float[] matIT = new float[16];
+			Matrix.transposeM(matIT, 0, matI, 0);
+			
 
-			mNormalMatrix = UtilMatrix.InverseTranspose(mModelViewMatrix);
+			mNormalMatrix = UtilMatrix.M4ToM3(matIT); //UtilMatrix.InverseTranspose(mModelViewMatrix);
 			GLES30.glUniformMatrix3fv(location, 1, false, mNormalMatrix, 0);
 
 			break;

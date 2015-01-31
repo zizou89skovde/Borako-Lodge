@@ -7,22 +7,28 @@ import android.opengl.Matrix;
 
 import com.lodge.err.GLError;
 import com.lodge.gl.camera.Camera;
+import com.lodge.gl.shader.components.Lightning;
 import com.lodge.math.UtilMatrix;
 import com.lodge.math.UtilVector;
 
 public class Light {
 
 
-	public final static String LABEL_LIGHT_DIR  = "u_LightDirection";
-	public final static String LABEL_LIGHT_POS  = "u_LightPosition";
-
 	public final static String LABEL_NUM_GLOBAL_LIGHTS 	= "u_NumGlobalLights";
 	public final static String LABEL_NUM_SPOTLIGHTS 	= "u_NumSpotLights";
 
-	public final static String LABEL_SPOTLIGHT_POS	 	= "u_SpotLightPosition";
-	public final static String LABEL_SPOTLIGHT_DIR	 	= "u_SpotLightDirection";
-	
-	public final static String LABEL_GLOBAL_DIR	 	= "u_GlobalLightDirection";
+	public final static String LABEL_SPOT_LIGHT   = "u_SpotLight";
+	public final static String LABEL_GLOBAL_LIGHT = "u_GlobalLight";
+
+
+	public static final String LIGHT_STRUCT_POS       = "pos";
+	public static final String LIGHT_STRUCT_DIR       = "dir";
+	public static final String LIGHT_STRUCT_SL_WIDTH  = "sl_width";
+	public static final String LIGHT_STRUCT_INTENSITY = "intensity";
+
+	public static final float MAX_DISTANCE 				= 10;
+	public static final int MAX_SPOT_LIGHTS 				= 2;
+	public static final int MAX_GLOBAL_LIGHTS 				= 1;
 
 
 	public enum Type{
@@ -49,6 +55,9 @@ public class Light {
 
 	float[] mDirection;
 	float[] mPosition;
+
+	float mIntensity = 1;
+	float mSpotLightWidth = 0.2f;
 
 
 	float[] mLookAt;
@@ -156,8 +165,10 @@ public class Light {
 	/**
 	 * Compute Camera Space direction 
 	 */
+	int ctr = 0;
 	void computeSCDirection(Transform transform){
-		mCSDirection = UtilVector.expand(UtilMatrix.M3V3(transform.normalixMatrix(),mDirection),4,0);
+		mCSDirection = UtilMatrix.M3V3(transform.normalixMatrix(),mDirection);
+		UtilVector.normalize(mCSDirection);
 	}
 
 	/**
@@ -197,55 +208,88 @@ public class Light {
 		// Upload #spotlights
 		int location = GLES30.glGetUniformLocation(program, LABEL_NUM_SPOTLIGHTS);
 		if(location < 0)
-			GLError.exit("Light upload - cant find NUM SPOTLIGHT location");
+			return;
 		GLES30.glUniform1i(location,numSpotLights);
 
 		if(numSpotLights > 0){
-
-			float[] spotDir = new float[4*numSpotLights];
-			int offDir = 0;
-			float[] spotPos = new float[4*numSpotLights];
-			int offPos = 0;
-
-			for (Light l : lights) {
+			int i = 0;
+			for (Light l : lights) 
 				if(l.type() == Type.POSITIONAL){
-					offDir = UtilVector.append(spotDir,l.mCSDirection,offDir);
-					offPos = UtilVector.append(spotPos,l.mCSPosition,offPos);
-				}
-			}
-			location = GLES30.glGetUniformLocation(program, LABEL_SPOTLIGHT_DIR);
-			if(location < 0)
-				GLError.exit("Light upload - cant find spotlight DIRECTION location");
-			GLES30.glUniform4fv(location,numSpotLights,spotDir,0);
+					String index = "["+String.valueOf(i)+"].";
+					//Upload direction data for light i
+					location = GLES30.glGetUniformLocation(program, LABEL_SPOT_LIGHT+index+LIGHT_STRUCT_DIR);
+					if(location < 0)
+						GLError.exit("Light upload - cant find spotlight uniform");
+					if(Lightning.LIGHT_FS)
+						GLES30.glUniform3f(location,l.mCSDirection[0],l.mCSDirection[1],l.mCSDirection[2]);
+					else
+						GLES30.glUniform3f(location,l.mDirection[0],l.mDirection[1],l.mDirection[2]);
 
-			location = GLES30.glGetUniformLocation(program, LABEL_SPOTLIGHT_POS);
-			if(location < 0)
-				GLError.exit("Light upload - cant find spotlight POSITION location");
-			GLES30.glUniform4fv(location,numSpotLights,spotPos,0);
-		}
+					//Upload position data for light i
+					location = GLES30.glGetUniformLocation(program, LABEL_SPOT_LIGHT+index+LIGHT_STRUCT_POS);
+					if(location < 0)
+						GLError.exit("Light upload - cant find spotlight uniform");
+					if(Lightning.LIGHT_FS)
+						GLES30.glUniform3f(location,l.mCSPosition[0],l.mCSPosition[1],l.mCSPosition[2]);
+					else
+						GLES30.glUniform3f(location,l.mPosition[0],l.mPosition[1],l.mPosition[2]);
+
+					//Upload light intensity
+					location = GLES30.glGetUniformLocation(program, LABEL_SPOT_LIGHT+index+LIGHT_STRUCT_INTENSITY);
+					if(location < 0)
+						GLError.exit("Light upload - cant find spotlight uniform");
+					GLES30.glUniform1f(location,l.mIntensity);
+
+					//Upload spotlight width
+					location = GLES30.glGetUniformLocation(program, LABEL_SPOT_LIGHT+index+LIGHT_STRUCT_SL_WIDTH);
+					if(location < 0)
+						GLError.exit("Light upload - cant find spotlight uniform");
+					GLES30.glUniform1f(location,l.mSpotLightWidth);
+
+				}
+		}	
 	}
-	
+
 	static void UploadGlobalLight(Vector<Light> lights,int program){
-		int numGlobalLights = NumItems(lights, Type.POSITIONAL);
+		int numGlobalLights = NumItems(lights, Type.DIRECTIONAL);
 		int location = GLES30.glGetUniformLocation(program, LABEL_NUM_GLOBAL_LIGHTS);
 		if(location < 0)
 			return;
 		GLES30.glUniform1i(location,numGlobalLights);
 		if(numGlobalLights > 0){
-			float[] dir = new float[4*numGlobalLights];
-			int off = 0;
+			int i = 0;
 			for (Light l : lights) {
 				if(l.type() == Type.DIRECTIONAL){
-					off = UtilVector.append(dir,l.mCSDirection,off);
+					String index = "["+String.valueOf(i)+"].";
+					location = GLES30.glGetUniformLocation(program, LABEL_GLOBAL_LIGHT +index+LIGHT_STRUCT_DIR);
+					if(location < 0)
+						GLError.exit("Light upload - cant find global light uniform");
+					
+					if(Lightning.LIGHT_FS)
+						GLES30.glUniform3f(location,l.mCSDirection[0],l.mCSDirection[1],l.mCSDirection[2]);
+					else
+						GLES30.glUniform3f(location,l.mDirection[0],l.mDirection[1],l.mDirection[2]);
+					
+					//Upload light intensity
+					location = GLES30.glGetUniformLocation(program, LABEL_GLOBAL_LIGHT+index+LIGHT_STRUCT_INTENSITY);
+					if(location < 0)
+						GLError.exit("Light upload - cant find global light uniform");
+					GLES30.glUniform1f(location,l.mIntensity);
+
+					//Upload spotlight width
+					location = GLES30.glGetUniformLocation(program, LABEL_GLOBAL_LIGHT+index+LIGHT_STRUCT_SL_WIDTH);
+					if(location < 0)
+						GLError.exit("Light upload - cant find global light uniform");
+					GLES30.glUniform1f(location,l.mSpotLightWidth);
+					
+				
 				}
 			}
-			location = GLES30.glGetUniformLocation(program, LABEL_GLOBAL_DIR);
-			if(location < 0)
-				GLError.exit("Light upload - cant find spotlight DIRECTION location");
-			GLES30.glUniform4fv(location,numGlobalLights,dir,0);
 
 		}
 	}
+	
+//	static void UploadLightProperties
 
 	public static void Upload(Vector<Light> lights,int program,Transform transform){
 
@@ -253,28 +297,8 @@ public class Light {
 		ComputeCS(lights, transform);
 
 		UploadSpotLight(lights, program);
-		
+
 		UploadGlobalLight(lights, program);
-
-	}
-
-	public void upload(int program,int count){
-
-		int location = GLES30.glGetUniformLocation(program, LABEL_LIGHT_DIR);
-		if(location < 0)
-			GLError.warn("Uniform - Could not find shader location");
-		else
-			GLES30.glUniform3f(location,mDirection[0],mDirection[1],mDirection[2]);
-
-		if(mType == Type.POSITIONAL){
-
-
-		}else{
-
-
-		}
-
-
 
 	}
 
@@ -288,6 +312,14 @@ public class Light {
 	}
 	public int id(){
 		return mId;
+	}
+
+	public float distance(float[] p) {
+		if(mType != Type.POSITIONAL)
+			GLError.exit("Distance function not valid for directional light");
+
+
+		return UtilVector.getLength3(p, mPosition);
 	}
 
 
