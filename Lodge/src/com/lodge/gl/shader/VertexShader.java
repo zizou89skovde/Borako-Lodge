@@ -21,9 +21,9 @@ public class VertexShader {
 
 		vertexShader += ShaderComposer.VERSION(310);
 
-		vertexShader += Lightning.DECLARE(renderable, true);
-
 		vertexShader += VSTransform.VS_DECLARE(renderable);
+		
+		vertexShader += Lightning.DECLARE(renderable, true);
 
 		vertexShader += Attributes.VS_IN_DECLARE(renderable);
 
@@ -37,9 +37,9 @@ public class VertexShader {
 
 		vertexShader += Texturing.VS_MAIN(renderable);
 
-		vertexShader += Lightning.VS_MAIN(renderable);
-
 		vertexShader += VSTransform.VS_MAIN(renderable);
+		
+		vertexShader += Lightning.VS_MAIN(renderable);
 
 		vertexShader += ShaderComposer.MAIN_END;
 		///////////////////// MAIN BODY STARTS HERE /////////////////////////

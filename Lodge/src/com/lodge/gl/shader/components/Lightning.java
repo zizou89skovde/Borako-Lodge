@@ -22,7 +22,7 @@ public class Lightning {
 	static final String MAX_SL_LIGHTS  = "[MAX_SPOT_LIGHTS]";
 
 
-	public static final String LIGHT_STRUCT 		   = "Light";
+	public static final String LIGHT_STRUCT  = "Light";
 
 	static final String FS_IN_SIZE_TYPE = "uniform int";
 
@@ -30,11 +30,12 @@ public class Lightning {
 	static final String UNIFORM_SPOTLIGHT_TYPE = "uniform "+LIGHT_STRUCT+"[MAX_SPOT_LIGHTS]";
 
 
-	public final static String FS_GLOBAL_LIGHT = "f_GlobalLight";	
-	public final static String FS_SPOT_LIGHT_POS   = "f_slPos";
+	public final static String FS_GLOBAL_LIGHT 	 = "f_glDir";	
+	public final static String FS_SPOT_LIGHT_POS = "f_slPos";
 	public final static String FS_SPOT_LIGHT_DIR = "f_slDir";
 
-	public final static boolean LIGHT_FS = false;
+
+	public static boolean LIGHT_FS = true;
 
 	public enum Type{
 		PHONG,
@@ -45,68 +46,59 @@ public class Lightning {
 
 	public static String DECLARE(Renderable renderable, boolean isVS){
 		String shader = "";
-		
+
 		if(renderable.lightning() == Type.NONE)
 			return "";
-		
-		if(LIGHT_FS){
-			if(isVS){
 
-			}else {	
-				shader += Lightning.DEFINE(renderable);
-
-				shader += Lightning.NUM_LIGHTS(renderable);
-
-				shader += Lightning.STRUCT_DECLARE(renderable);
-
-				shader += Lightning.UNIFORM_DECLARE(renderable);
-			}
-		}else{
-			if(isVS){
-				shader += Lightning.DEFINE(renderable);
-
-				shader += Lightning.NUM_LIGHTS(renderable);
-
-				shader += Lightning.STRUCT_DECLARE(renderable);
-
-				shader += Lightning.UNIFORM_DECLARE(renderable);
-
-				shader += Lightning.ATTRIBUTE_DECLARE(renderable,"out");
-			}else {
-
-				shader += Lightning.DEFINE(renderable);
-
-				shader += Lightning.NUM_LIGHTS(renderable);
-
-				shader += Lightning.ATTRIBUTE_DECLARE(renderable,"in");
-			}
+		if(!isVS){
+			shader += DEFINE(renderable);
+			shader += NUM_LIGHTS(renderable);
+			shader += STRUCT_PROPERTIES_DEFINE();
+			shader += PROPERTIES_DECLARE();
+			
+			if(LIGHT_FS)
+				shader += UNIFORM_DECLARE(renderable); 			//Light solely is computed in fragment shader
+			else
+				shader += ATTRIBUTE_DECLARE(renderable,"in"); 	//Light is passed through vertex shader
 		}
+
+		//Light is passed through vertex shader
+		if(isVS && !LIGHT_FS){
+			shader += DEFINE(renderable);
+			shader += NUM_LIGHTS(renderable);
+			shader += UNIFORM_DECLARE(renderable);
+			shader += ATTRIBUTE_DECLARE(renderable,"out");
+		}
+
 		return shader;
 	}
 
-
-	public static String STRUCT_DECLARE(Renderable rend){
-		if(rend.lightning() != Type.NONE){
-			return		"struct "+LIGHT_STRUCT+"{ \n"+
-					ShaderComposer.TAB + "float "+Light.LIGHT_STRUCT_INTENSITY+";\n"+
-					ShaderComposer.TAB + "vec3 "+Light.LIGHT_STRUCT_POS+";\n"+
-					ShaderComposer.TAB + "float "+Light.LIGHT_STRUCT_SL_WIDTH+";\n"+
-					ShaderComposer.TAB + "vec3 "+Light.LIGHT_STRUCT_DIR+";\n"+
-					"};\n";
-		}
-		return "";
-
+	public static String STRUCT_PROPERTIES_DEFINE(){
+		ArrayList<String> s = new ArrayList<String>();
+		s.add("struct "+LIGHT_STRUCT+"{ \n");
+		s.add(ShaderComposer.TAB + "vec3 " +Light.LIGHT_PROP_STRUCT_COLOR + ";\n");
+		s.add(ShaderComposer.TAB + "float "+Light.LIGHT_PROP_STRUCT_INTENSITY+ ";\n");
+		s.add(ShaderComposer.TAB + "float "+Light.LIGHT_PROP_STRUCT_SL_WIDTH+ ";\n");
+		s.add("};\n");
+		return FINALIZE(s);
 	}
+
+	public static String PROPERTIES_DECLARE(){
+		ArrayList<String> s = new ArrayList<String>();
+		s.add("uniform " + LIGHT_STRUCT + " " + Light.LABEL_PROP_GLOBAL_LIGHT+MAX_GL_LIGHTS+"");
+		s.add("uniform " + LIGHT_STRUCT + " " + Light.LABEL_PROP_SPOT_LIGHT+MAX_SL_LIGHTS+"");
+		return ShaderComposer.FORMAT_LINE(StringUtils.TO_ARR(s));
+	}
+
 
 	static String ATTRIBUTE_DECLARE(Renderable rend,String inout){
 		if(rend.lightning() != Type.NONE){
-
 			ArrayList<String> s = new ArrayList<String>();
-			s.add(inout + " vec3 " + FS_GLOBAL_LIGHT+MAX_GL_LIGHTS);
-			s.add(inout + " vec3 " + FS_SPOT_LIGHT_DIR+MAX_SL_LIGHTS);
-			s.add(inout + " vec3 " + FS_SPOT_LIGHT_POS+MAX_SL_LIGHTS);
-			return ShaderComposer.FORMAT_LINE(StringUtils.TO_ARR(s));
 
+			s.add(inout + " vec3 " + FS_GLOBAL_LIGHT   + MAX_GL_LIGHTS);
+			s.add(inout + " vec4 " + FS_SPOT_LIGHT_DIR + MAX_SL_LIGHTS);
+
+			return ShaderComposer.FORMAT_LINE(StringUtils.TO_ARR(s));
 		}
 		return "";
 	}
@@ -142,14 +134,15 @@ public class Lightning {
 		case PHONG:
 		case DIFFUSE:
 			ArrayList<String> declare = new ArrayList<String>();
-			declare.add(UNIFORM_SPOTLIGHT_TYPE 	 + " " + Light.LABEL_SPOT_LIGHT);
-			declare.add(UNIFORM_GLOBAL_TYPE 	 + " " + Light.LABEL_GLOBAL_LIGHT);
+
+			declare.add("uniform vec3 " + Light.LABEL_GLOBAL_LIGHT_DIR + MAX_GL_LIGHTS);
+			declare.add("uniform vec3 " + Light.LABEL_SPOT_LIGHT_DIR + MAX_SL_LIGHTS);
+			declare.add("uniform vec3 " + Light.LABEL_SPOT_LIGHT_POS + MAX_SL_LIGHTS);
 
 			//Shader variables declared 
-			sv.spotLight(Light.LABEL_SPOT_LIGHT,ShaderVariables.LIGHT_DIR);
-			sv.spotLight(Light.LABEL_SPOT_LIGHT,ShaderVariables.LIGHT_POS);
-			sv.globalLight(Light.LABEL_GLOBAL_LIGHT);
-
+			sv.spotLight(Light.LABEL_SPOT_LIGHT_POS,ShaderVariables.LIGHT_POS);
+			sv.spotLight(Light.LABEL_SPOT_LIGHT_DIR,ShaderVariables.LIGHT_DIR);
+			sv.globalLight(Light.LABEL_GLOBAL_LIGHT_DIR);
 
 			s = declare.toArray(new String[declare.size()]);
 		case NONE:
@@ -163,37 +156,53 @@ public class Lightning {
 
 		return "";
 	}
+	/**
+	 * 
+	 * @param sv
+	 * @param t
+	 * @return
+	 */
+	static String GetSpotLight(ShaderVariables sv,int t){
 
-	static void COPY_GLOBAL(ArrayList<String> s, String[] ll, String[] rl,String[] transform){
-		String dir = "[i]."+Light.LIGHT_STRUCT_DIR;
-		if(LIGHT_FS){
-
-
-			String intensity = "[i]."+Light.LIGHT_STRUCT_INTENSITY;
-
-			s.add(ShaderComposer.TAB + ll + dir + 		" = " + transform[2] + "*" +  rl + dir +";");
-			s.add(ShaderComposer.TAB + ll + intensity + " = " + rl + intensity +";");
+		if(t == ShaderVariables.LIGHT_POS){
+			return sv.spotLight(ShaderVariables.LIGHT_POS)+"[i]";
+		}else if(t == ShaderVariables.LIGHT_DIR){
+			return sv.spotLight(ShaderVariables.LIGHT_DIR)+"[i]";			
 		}else{
-
-			s.add(ShaderComposer.TAB + ll[0]+"[i] = " + transform[2] + "*" +  rl[0] + dir +";");
+			GLError.exit("Invalid spotlight type");	
 		}
+		return "";
 	}
 
-	static void COPY_SPOT(ArrayList<String> s, String[] ll, String[] rl,String[] transform){
-		COPY_GLOBAL(s, ll, rl, transform);
-		String pos = "[i]."+Light.LIGHT_STRUCT_POS;
-		if(LIGHT_FS){
+	static void COPY_GLOBAL(ArrayList<String> s, Renderable rend){
+
+		String dir = "[i]";
+		ShaderVariables sv = rend.getShaderVariables();
+		String TBN = "";
+		if(sv.TBN() != null)
+			TBN = sv.TBN()+"*";
+
+		s.add(ShaderComposer.TAB + FS_GLOBAL_LIGHT+"[i] = " +TBN +  sv.globalLight() + dir +";");
+	}
 
 
-			String slWidth = "[i]."+Light.LIGHT_STRUCT_SL_WIDTH;
 
-			s.add(ShaderComposer.TAB + ll + pos + 	  " = vec3("+ transform[1]+ "* vec4(" +  rl + pos +"));");
-			s.add(ShaderComposer.TAB + ll + slWidth + " = " + rl + slWidth +";");
-		}
-		else{
-			s.add(ShaderComposer.TAB + ll[1] + "[i] = vec3("+ transform[1]+ "* vec4(" +  rl[1] + pos +",1.0));");
-		}
+	static void COPY_SPOT(ArrayList<String> s,Renderable rend){
 
+		ShaderVariables sv = rend.getShaderVariables();
+
+		String lightPos  = GetSpotLight(sv,ShaderVariables.LIGHT_POS);
+		String lightDir  = GetSpotLight(sv,ShaderVariables.LIGHT_DIR);
+		String vertexPos = sv.position();
+
+		String TBN = "";
+		if(sv.TBN() != null)
+			TBN = sv.TBN()+"*";
+
+		String outDir    = FS_SPOT_LIGHT_DIR+"[i]";
+		s.add(ShaderComposer.TAB + "vec3 temp = " + lightPos + "-" + vertexPos + ";");
+		s.add(ShaderComposer.TAB + outDir + ".xyz ="+TBN + "temp;"); 
+		s.add(ShaderComposer.TAB + outDir + ".w = dot(normalize(temp)" + ",-" + lightDir+");"); 
 	}
 
 	public static String VS_MAIN(Renderable rend){
@@ -203,20 +212,19 @@ public class Lightning {
 		}
 		ArrayList<String> temp = new ArrayList<String>();
 		ShaderVariables sv = rend.getShaderVariables();
-		String[] transform = rend.getTransform().getShaderNames();
 
 		switch(rend.lightning()){
 
 		case PHONG:
 		case DIFFUSE:
 			//Copy global data to varying variable
-			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_GLOBAL_LIGHTS + " && i < MAX_GLOBAL_LIGHTS;i++){");
-			COPY_GLOBAL(temp, new String[]{FS_GLOBAL_LIGHT}, new String[]{sv.globalLight()}, transform);
+			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_GLOBAL_LIGHTS + ";i++){");
+			COPY_GLOBAL(temp, rend);
 			temp.add("}");
 
 			//Copy spotlight data to varying variable
-			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_SPOTLIGHTS + " && i < MAX_SPOT_LIGHTS;i++){");
-			COPY_SPOT(temp, new String[]{FS_SPOT_LIGHT_DIR,FS_SPOT_LIGHT_POS}, sv.spotLight(), transform);
+			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_SPOTLIGHTS + ";i++){");
+			COPY_SPOT(temp, rend);
 			temp.add("}");
 
 			sv.globalLight(FS_GLOBAL_LIGHT);
@@ -236,48 +244,47 @@ public class Lightning {
 
 	}
 
-	// Spotlights
-	static void diffuseGlobal(ArrayList<String> s,String light){
-		String dir = null; 
-		if(LIGHT_FS)
-			dir = "[i]."+Light.LIGHT_STRUCT_DIR+");";
-		else
-			dir = "[i]);";
-		
-		s.add(ShaderComposer.TAB + "l = normalize(" + light + dir);
-		s.add(ShaderComposer.TAB + "diffuse += 0.0*max(dot(n,l),0.0);");
+	//  Global lights
+	static void GlobalDiffuse(ArrayList<String> s,String light){
+		String dir = "[i]);";
+		s.add(ShaderComposer.TAB + "l = -normalize(" + light + dir);
+		s.add(ShaderComposer.TAB + "diffuse += max(dot(n,l),0.0);");
 	}
-	static void specularGlobal(ArrayList<String> s){
-		s.add(ShaderComposer.TAB + "r = reflect(l,n);");
-		s.add(ShaderComposer.TAB + "float temp_s = max(dot(r,e),0.0);");
-		s.add(ShaderComposer.TAB + "specular += pow(temp_s,20.0);");
-	}
-
-	// Global lights
-	static void diffuseSpotLight(ArrayList<String> s,String[] light,String position){
-
-		
-		String pos = null;
-		if(LIGHT_FS)
-			pos = "[i]."+Light.LIGHT_STRUCT_POS+");";
-		else
-			pos = "[i]);";
-		
-		String dir = null;
-		if(LIGHT_FS)
-			dir = "[i]."+Light.LIGHT_STRUCT_DIR+"))*0.5;";
-		else
-			dir = "[i]))*0.5;";
-		
-		s.add(ShaderComposer.TAB + "float d =  (1.0+dot(l,"+ light[1]+dir);
-		s.add(ShaderComposer.TAB + "l = normalize("+position +" - " + light[0]+ pos);
-		
-		s.add(ShaderComposer.TAB + "diffuse += d*max(dot(n,-l),0.0);");
-	}
-	static void specularSpotLight(ArrayList<String> s){
+	static void GlobalSpecular(ArrayList<String> s){
 		s.add(ShaderComposer.TAB + "r = -reflect(l,n);");
 		s.add(ShaderComposer.TAB + "float temp_s = max(dot(r,e),0.0);");
-		s.add(ShaderComposer.TAB + "specular += d*pow(temp_s,20.0);");
+		String color = Light.LABEL_PROP_GLOBAL_LIGHT+"[i]."+Light.LIGHT_PROP_STRUCT_COLOR;
+		s.add(ShaderComposer.TAB + "specular +=" + color + "* pow(temp_s,20.0);");
+	}
+
+	//Spotlights
+	static void SpotLightDiffuse(ArrayList<String> s,ShaderVariables sv){
+		String att =  "1.0/(1.0+0.2*length(dir))";
+
+		if(LIGHT_FS){
+			String lightPos = GetSpotLight(sv, ShaderVariables.LIGHT_POS);
+			String lightDir = GetSpotLight(sv, ShaderVariables.LIGHT_DIR);
+			String pos 		= sv.position();
+			s.add(ShaderComposer.TAB + "vec3 dir  = " + lightPos +"-" + pos + ";");
+			s.add(ShaderComposer.TAB + "l = normalize(dir);");
+			s.add(ShaderComposer.TAB + "float att = "+ att+"*dot(-l,"+lightDir+");");
+		}else{
+
+			String lightDir = sv.spotLight(ShaderVariables.LIGHT_DIR)+"[i]";
+			s.add(ShaderComposer.TAB + "vec3 dir ="+lightDir+".xyz;");
+			s.add(ShaderComposer.TAB + "l = normalize("+lightDir+".xyz);");
+			s.add(ShaderComposer.TAB + "float att ="+ att+"*"+lightDir+".w;");
+
+		}
+		s.add(ShaderComposer.TAB + "att = max(att,0.0);");
+		s.add(ShaderComposer.TAB + "diffuse += att*max(dot(n,l),0.0);");
+	}
+
+	static void SpotLightSpecular(ArrayList<String> s){
+		s.add(ShaderComposer.TAB + "r = -reflect(l,n);");
+		s.add(ShaderComposer.TAB + "float temp_s = clamp(dot(r,e),0.0,1.0);");
+		String color = Light.LABEL_PROP_SPOT_LIGHT+"[i]."+Light.LIGHT_PROP_STRUCT_COLOR;
+		s.add(ShaderComposer.TAB + "specular +=" + color + "*att*pow(temp_s,20.0);");
 	}
 
 
@@ -298,28 +305,28 @@ public class Lightning {
 		case PHONG:
 
 			temp.add("vec3 e = normalize(-" + sv.position() + ");");
-			temp.add("float specular = 0.0;");
+			temp.add("vec4 specular = vec4(0.0);");
 
-			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_GLOBAL_LIGHTS + " && i < MAX_GLOBAL_LIGHTS;i++){");
-			diffuseGlobal(temp, sv.globalLight());
-			specularGlobal(temp);
+			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_GLOBAL_LIGHTS + ";i++){");
+			GlobalDiffuse(temp, sv.globalLight());
+			GlobalSpecular(temp);
 			temp.add("}");
 
-			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_SPOTLIGHTS + " && i < MAX_SPOT_LIGHTS;i++){");
-			diffuseSpotLight(temp, sv.spotLight(),sv.position());
-			specularSpotLight(temp);
+			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_SPOTLIGHTS + ";i++){");
+			SpotLightDiffuse(temp, sv);
+			SpotLightSpecular(temp);
 			temp.add("}");
 
-			temp.add( sv.color() + "= (specular+diffuse+ambient) *" + sv.color()  + ";");
+			temp.add( sv.color() + "= specular + (diffuse+ambient) *" + sv.color()  + ";");
 
 			break;
 		case DIFFUSE:
-			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_GLOBAL_LIGHTS + " && i < MAX_GLOBAL_LIGHTS;i++){");
-			diffuseGlobal(temp, sv.globalLight());
+			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_GLOBAL_LIGHTS + ";i++){");
+			GlobalDiffuse(temp, sv.globalLight());
 			temp.add("}");
 
-			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_SPOTLIGHTS + " && i < MAX_SPOT_LIGHTS;i++){");
-			diffuseSpotLight(temp, sv.spotLight(),sv.position());
+			temp.add("for(int i = 0; i < "  + Light.LABEL_NUM_SPOTLIGHTS + ";i++){");
+			SpotLightDiffuse(temp, sv);
 			temp.add("}");
 
 			temp.add( sv.color() + "= (diffuse+ambient)*" + sv.color()  + ";");

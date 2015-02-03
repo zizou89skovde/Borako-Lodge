@@ -21,6 +21,7 @@ public class Texturing {
 
 	final static String TEXTURE_TYPE = "uniform sampler2D";
 	final static String COLOR_NAME 	 = "color";
+	final static String NORMAL_NAME 	 = "normal";
 
 	public static boolean HAS_TCOORDS(String[] attr){
 		int len = attr.length;
@@ -134,7 +135,7 @@ public class Texturing {
 				colorList.add(ShaderComposer.TAB +  "vec4 " + COLOR_NAME + " = texture(" + texture.getLabel() + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");");
 				if(texture.hasNormalMap()){
 					Texture normalmap = texture.getNormalMap();
-					colorList.add(ShaderComposer.TAB +  "vec3 n = texture(" + normalmap.getLabel() + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");");
+					colorList.add(ShaderComposer.TAB +  "vec3 "+NORMAL_NAME + " = texture(" + normalmap.getLabel() + "," + Attributes.LABEL_ATTR_FS_TCOORD + ");");
 				}
 				
 			}
@@ -143,6 +144,7 @@ public class Texturing {
 		
 		//Set color variable name
 		sv.color(COLOR_NAME);
+		sv.normalMap(NORMAL_NAME);
 		if(s != null)
 			return ShaderComposer.FORMAT_LINE(s);
 		return "";

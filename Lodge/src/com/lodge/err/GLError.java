@@ -20,6 +20,11 @@ public class GLError {
 		Log.i(TAG,str);
 	}
 	
+	public static void checkLocation(int l,String s){
+		if(l < 0){
+			exit(s);
+		}
+	}
 	
 	static public void checkError(String op) {
 		int error;

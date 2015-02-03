@@ -2,14 +2,11 @@ package com.lodge.gl.utils;
 
 import android.opengl.GLES30;
 import android.opengl.Matrix;
-import android.test.UiThreadTest;
-
 import com.lodge.err.GLError;
 import com.lodge.math.UtilMatrix;
-
+import com.lodge.math.UtilVector;
 
 public class Transform {
-
 
 	public enum Type{
 		MVP,
@@ -18,15 +15,14 @@ public class Transform {
 		NONE,
 	}
 
-
 	public static String NORMAL_MATRIX = "u_NormalMatrix";
 
-
-
 	private float[] mMatrix;
+	private float[] mView;
 	private float[] mTranslate;
 	private float[] mRotate;
 	private float[] mScale;
+	
 	//private float[] mArbRotate; // TODO: ArbRotate
 
 	private float[] mNormalMatrix = new float[9];
@@ -56,16 +52,18 @@ public class Transform {
 		switch(mType){
 
 		case MVP:
-			s = new String[3];
+			s = new String[4];
 			s[0] = "u_MVPMatrix";
 			s[1] = "u_MVMatrix";
 			s[2] = "u_NormalMatrix";
+			s[3] = "u_ViewMatrix";
 			break;
 		case VP:
 			s = new String[3];
 			s[0] = "u_VPMatrix";
 			s[1] = "u_VMatrix";
 			s[2] = "u_NormalMatrix";
+			
 			break;
 
 		case P:
@@ -99,18 +97,62 @@ public class Transform {
 		mScale = new float[]{x,y,z};
 		hasBeenModified = true;
 	}
+	float transposed = 1.0f;
+	
+	float[] Rx(float[] dst, float a)
+	{
+		float[] m = new float[16];
+		Matrix.setIdentityM(m, 0);
+		m[5] = (float) Math.cos(a);
+		m[9] = transposed*(float)-Math.sin(a);
+		m[6] = -m[9]; //sin(a);
+		m[10] = m[5]; //cos(a);
+		return mult(dst,m);
+	}
+
+	float[] Ry(float[] dst, float a)
+	{
+		float[] m = new float[16];
+		Matrix.setIdentityM(m, 0);
+		m[0] = (float) Math.cos(a);
+		m[8] = transposed*(float) Math.sin(a);
+		m[2] = -m[8]; //sin(a);
+		m[10] = m[0]; //cos(a);
+		return mult(dst,m);
+	}
+
+	float[] Rz(float[] dst, float a)
+	{
+		float[] m = new float[16];
+		Matrix.setIdentityM(m, 0);
+		m[0] = (float) Math.cos(a);
+		m[4] = transposed*(float) Math.sin(a);
+		m[1] = -m[4]; //sin(a);
+		m[5] = m[0]; //cos(a);
+		return mult(dst,m);
+	}
+	
+	float[] mult(float[] lh, float[] rh){
+		float[] dst = new float[16];
+		Matrix.multiplyMM(dst, 0, lh, 0, rh, 0);
+		return dst;
+	}
 
 	private void computeMatrix(){
 		if(hasBeenModified){
 			Matrix.setIdentityM(mMatrix, 0);
 
-			Matrix.scaleM(mMatrix, 0, mScale[0], mScale[1], mScale[2]);
-
-			Matrix.rotateM(mMatrix, 0, mRotate[0], 1, 0, 0);
-			Matrix.rotateM(mMatrix, 0, mRotate[1], 0, 1, 0);
-			Matrix.rotateM(mMatrix, 0, mRotate[2], 0, 0, 1);
-
 			Matrix.translateM(mMatrix, 0, mTranslate[0], mTranslate[1], mTranslate[2]);
+
+			if(Math.abs(UtilVector.getLength(mRotate, UtilVector.XYZ))>0.01){
+				
+				mMatrix = Rx(mMatrix,(float)Math.toRadians(mRotate[0]));
+//				Matrix.rotateM(mMatrix, 0, mRotate[0],1 , 0, 0);
+				Matrix.rotateM(mMatrix, 0, mRotate[1], 0, 1, 0);
+				Matrix.rotateM(mMatrix, 0, mRotate[2], 0, 0, 1);
+			}
+
+			Matrix.scaleM(mMatrix, 0, mScale[0], mScale[1], mScale[2]);
 
 		}
 		hasBeenModified = false;
@@ -129,7 +171,8 @@ public class Transform {
 	public void upload(int program, float[] projection, float[] view){
 		int location;
 
-
+		mView = view.clone();
+		
 		String[] name = getShaderNames();
 
 		switch(mType){
@@ -169,6 +212,10 @@ public class Transform {
 
 			mNormalMatrix = UtilMatrix.M4ToM3(matIT); //UtilMatrix.InverseTranspose(mModelViewMatrix);
 			GLES30.glUniformMatrix3fv(location, 1, false, mNormalMatrix, 0);
+
+			location = GLES30.glGetUniformLocation(program, name[3]);
+			checkLocation(location);
+			GLES30.glUniformMatrix4fv(location, 1, false, view, 0);
 
 			break;
 
@@ -217,15 +264,13 @@ public class Transform {
 		return mType;
 	}
 
+	public float[] getView(){
+		return mView;
+	}
+	
 	public float[] normalixMatrix() {
 		if(mType == Type.MVP || mType == Type.VP)
 			return mNormalMatrix;
-		return null;
-	}
-
-	public float[] toViewMatrix() {
-		if(mType == Type.MVP || mType == Type.VP )
-			return mModelViewMatrix;
 		return null;
 	}
 

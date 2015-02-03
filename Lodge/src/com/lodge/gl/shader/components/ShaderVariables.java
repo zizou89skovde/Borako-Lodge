@@ -8,6 +8,7 @@ public class ShaderVariables {
 		private String[] mAttributeSpotLight    = null;
 		private String mAttributeGlobalLight    = null;
 		private String mOutColor 				= null;
+		private String mNormalMap 				= null;
 		private String mTBN 					= null;
 		
 		public static int LIGHT_DIR = 0;
@@ -70,6 +71,13 @@ public class ShaderVariables {
 		}
 		public String TBN(){
 			return mTBN;
+		}
+		public void normalMap(String normalName) {
+			mNormalMap = normalName;
+			
+		}
+		public String normalMap() {
+			return mNormalMap;
 		}
 		
 		

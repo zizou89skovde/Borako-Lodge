@@ -10,6 +10,7 @@ import com.lodge.err.GLError;
 import com.lodge.gl.model.ModelData;
 import com.lodge.gl.model.ModelLoader;
 import com.lodge.gl.shader.ShaderComposer;
+import com.lodge.gl.shader.components.Lightning;
 import com.lodge.gl.shader.components.Lightning.Type;
 import com.lodge.gl.shader.components.ShaderVariables;
 import com.lodge.gl.shader.components.Texturing;
@@ -350,8 +351,8 @@ abstract public class Renderable {
 		Texture.Bind(mTextures,program);
 
 		mTransform.upload(program, projection, view);
-
-		Light.Upload(mLight,program,mTransform); // TODO: do this once for every new light, this should not be done no light model has been selected
+		if(lightning() != Lightning.Type.NONE)
+			Light.Upload(mLight,program,mTransform); // TODO: do this once for every new light, this should not be done no light model has been selected
 
 		DrawMethod.Draw(mSettings, mVAO);
 
@@ -401,7 +402,7 @@ abstract public class Renderable {
 		return mLightning;
 	}
 	
-	public void shading(Type shading) {
+	public void lightning(Type shading) {
 		mLightning = shading;
 	}
 

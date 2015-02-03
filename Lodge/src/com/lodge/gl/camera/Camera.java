@@ -24,7 +24,7 @@ public class Camera {
 
 	public Camera() {
 		mCamera = new CameraInstance();
-		mCamera.setCamEye(new float[]{0,4,4});
+		mCamera.setCamEye(new float[]{4,4,0});
 		mCamera.setCamCenter(new float[]{0,4,0});
 	}
 
